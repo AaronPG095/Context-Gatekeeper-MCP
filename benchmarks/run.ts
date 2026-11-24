@@ -1,6 +1,7 @@
 import { encode } from 'gpt-tokenizer/encoding/o200k_base';
 import { compressOutput } from '../src/compress/registry.js';
 import { getAllBenchmarkFixtures } from './fixtures.js';
+import { MIN_NAV_REDUCTION_PCT, runNavBenchmark } from './nav-bench.js';
 
 const MIN_REDUCTION_PCT = 60;
 
@@ -12,7 +13,7 @@ interface BenchRow {
   diagnosticsOk: boolean;
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const fixtures = getAllBenchmarkFixtures();
   const results: BenchRow[] = [];
   let allPassed = true;
@@ -69,9 +70,24 @@ function main(): void {
     `| **Total** | **${totalRaw}** | **${totalComp}** | **${totalPct.toFixed(1)}%** | ${allPassed ? '**PASS**' : '**FAIL**'} |\n`,
   );
 
+  const nav = await runNavBenchmark();
+  if (!nav.passed) {
+    allPassed = false;
+    console.error(
+      `[FAIL] AST navigation: reduction ${nav.reductionPct.toFixed(1)}% < ${MIN_NAV_REDUCTION_PCT}%`,
+    );
+  }
+
+  console.log('### AST Navigation Benchmark (gpt-tokenizer o200k_base)\n');
+  console.log('| Scenario | Raw Full-File Tokens | AST Nav Tokens | Reduction | Status |');
+  console.log('| :--- | ---: | ---: | ---: | :---: |');
+  console.log(
+    `| 6-file TS + C# repo_map -> symbol_outline -> read_symbol | ${nav.rawTokens} | ${nav.navTokens} | ${nav.reductionPct.toFixed(1)}% | ${nav.passed ? 'PASS' : 'FAIL'} |\n`,
+  );
+
   if (!allPassed) {
     process.exit(1);
   }
 }
 
-main();
+void main();

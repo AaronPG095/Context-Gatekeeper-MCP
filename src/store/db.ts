@@ -48,6 +48,43 @@ CREATE TRIGGER IF NOT EXISTS artifact_lines_ad AFTER DELETE ON artifact_lines BE
   INSERT INTO artifact_lines_fts(artifact_lines_fts, rowid, text, artifact_id, line_no)
   VALUES ('delete', old.id, old.text, old.artifact_id, old.line_no);
 END;
+
+CREATE TABLE IF NOT EXISTS files (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  rel_path TEXT UNIQUE NOT NULL,
+  lang TEXT NOT NULL,
+  sha256 TEXT NOT NULL,
+  mtime_ms INTEGER NOT NULL,
+  line_count INTEGER NOT NULL,
+  indexed_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS symbols (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  qualified_name TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  signature TEXT NOT NULL,
+  is_exported INTEGER NOT NULL,
+  start_line INTEGER NOT NULL,
+  end_line INTEGER NOT NULL,
+  parent_id INTEGER REFERENCES symbols(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_symbols_file_line ON symbols(file_id, start_line);
+CREATE INDEX IF NOT EXISTS idx_symbols_name ON symbols(name);
+
+CREATE TABLE IF NOT EXISTS symbol_refs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+  symbol_name TEXT NOT NULL,
+  line_no INTEGER NOT NULL,
+  col_no INTEGER NOT NULL,
+  snippet TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_symbol_refs_name ON symbol_refs(symbol_name);
 `;
 
 /**

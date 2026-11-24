@@ -10,6 +10,17 @@ export {
   type SearchLinesOptions,
 } from './store/artifacts.js';
 export {
+  SymbolStore,
+  normalizeRelPath,
+  type FileRecord,
+  type RepoMapFileEntry,
+  type SymbolInput,
+  type SymbolRecord,
+  type SymbolRefInput,
+  type SymbolRefRecord,
+  type UpsertFileIndexInput,
+} from './store/symbols.js';
+export {
   runCommand,
   stripAnsi,
   type RunCommandOptions,
@@ -32,3 +43,37 @@ export {
   type FetchChunkInput,
   type FetchChunkResult,
 } from './tools/fetch-chunk.js';
+export {
+  detectLanguage,
+  getParserForLang,
+  initTreeSitter,
+  type SupportedLang,
+} from './ast/parser.js';
+export {
+  extractFileAst,
+  type ExtractedFileAst,
+} from './ast/extract.js';
+export {
+  indexWorkspace,
+  type IndexStats,
+} from './ast/indexer.js';
+export {
+  repoMap,
+  type RepoMapInput,
+  type RepoMapResult,
+} from './tools/repo-map.js';
+export {
+  symbolOutline,
+  type SymbolOutlineInput,
+  type SymbolOutlineResult,
+} from './tools/symbol-outline.js';
+export {
+  readSymbol,
+  type ReadSymbolInput,
+  type ReadSymbolResult,
+} from './tools/read-symbol.js';
+export {
+  findReferences,
+  type FindReferencesInput,
+  type FindReferencesResult,
+} from './tools/find-references.js';
