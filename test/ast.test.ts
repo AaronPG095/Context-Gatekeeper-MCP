@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, unlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -66,6 +66,12 @@ describe('indexWorkspace (web-tree-sitter WASM + incremental SQLite)', () => {
 
     const second = await indexWorkspace(store, dir);
     expect(second).toEqual({ indexed: 0, skipped: 2, pruned: 0, totalFiles: 2 });
+
+    // Touch mtime without changing content -> skipped via sha256 match.
+    const future = new Date(Date.now() + 5000);
+    utimesSync(join(dir, 'src', 'auth.ts'), future, future);
+    const touched = await indexWorkspace(store, dir);
+    expect(touched).toEqual({ indexed: 0, skipped: 2, pruned: 0, totalFiles: 2 });
 
     writeFileSync(
       join(dir, 'src', 'auth.ts'),

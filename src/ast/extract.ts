@@ -174,6 +174,11 @@ function walkTypeScript(
         endLine: node.endPosition.row + 1,
         parentQualifiedName: parentQualified,
       });
+      const body = node.childForFieldName('body');
+      if (body) walkTypeScriptRefsOnly(body, addRef);
+      const params = node.childForFieldName('parameters');
+      if (params) walkTypeScriptRefsOnly(params, addRef);
+      return;
     }
   }
 

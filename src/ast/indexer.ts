@@ -3,7 +3,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { normalizeRelPath, type SymbolStore } from '../store/symbols.js';
 import { extractFileAst } from './extract.js';
-import { detectLanguage, getParserForLang } from './parser.js';
+import { detectLanguage, getParserForLang, type SupportedLang } from './parser.js';
+import type Parser from 'web-tree-sitter';
 
 export interface IndexStats {
   indexed: number;
@@ -75,8 +76,18 @@ export async function indexWorkspace(
 ): Promise<IndexStats> {
   const ignoreRules = compileGitignore(rootDir);
   const seenPaths = new Set<string>();
+  const parsers = new Map<SupportedLang, Parser>();
   let indexed = 0;
   let skipped = 0;
+
+  const getCachedParser = async (lang: SupportedLang): Promise<Parser> => {
+    let p = parsers.get(lang);
+    if (!p) {
+      p = await getParserForLang(lang);
+      parsers.set(lang, p);
+    }
+    return p;
+  };
 
   const walk = async (dir: string) => {
     const entries = readdirSync(dir, { withFileTypes: true });
@@ -117,7 +128,7 @@ export async function indexWorkspace(
         continue;
       }
 
-      const parser = await getParserForLang(lang);
+      const parser = await getCachedParser(lang);
       const extracted = extractFileAst(lang, source, parser);
 
       store.upsertFileIndex({
@@ -133,13 +144,19 @@ export async function indexWorkspace(
     }
   };
 
-  await walk(rootDir);
-  const pruned = store.pruneDeletedFiles(seenPaths);
+  try {
+    await walk(rootDir);
+    const pruned = store.pruneDeletedFiles(seenPaths);
 
-  return {
-    indexed,
-    skipped,
-    pruned,
-    totalFiles: seenPaths.size,
-  };
+    return {
+      indexed,
+      skipped,
+      pruned,
+      totalFiles: seenPaths.size,
+    };
+  } finally {
+    for (const p of parsers.values()) {
+      p.delete();
+    }
+  }
 }

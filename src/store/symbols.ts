@@ -76,7 +76,8 @@ export interface RepoMapFileEntry {
  * Normalizes a relative file path to forward slashes without leading `./`.
  */
 export function normalizeRelPath(p: string): string {
-  return p.replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/+$/, '');
+  const norm = p.replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/+$/, '');
+  return norm === '.' ? '' : norm;
 }
 
 /**
@@ -203,16 +204,17 @@ export class SymbolStore {
 
   getRepoMapEntries(pathPrefix?: string): RepoMapFileEntry[] {
     const normPrefix = pathPrefix ? normalizeRelPath(pathPrefix) : '';
+    const escapedPrefix = normPrefix.replace(/[\\%_]/g, (m) => `\\${m}`);
     const fileRows = (
       normPrefix
         ? this.db
             .prepare(
               `SELECT id, rel_path, lang, line_count
                FROM files
-               WHERE rel_path = ? OR rel_path LIKE ?
+               WHERE rel_path = ? OR rel_path LIKE ? ESCAPE '\\'
                ORDER BY rel_path ASC`,
             )
-            .all(normPrefix, `${normPrefix}/%`)
+            .all(normPrefix, `${escapedPrefix}/%`)
         : this.db
             .prepare(
               `SELECT id, rel_path, lang, line_count

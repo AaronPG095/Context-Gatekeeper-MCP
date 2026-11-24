@@ -67,6 +67,9 @@ describe('Navigation tools (repoMap, symbolOutline, readSymbol, findReferences)'
     const store = new SymbolStore(db);
     await indexWorkspace(store, dir);
 
+    const rootMap = repoMap(store, { path: '.' });
+    expect(rootMap.files_count).toBe(3);
+
     const topMap = repoMap(store, { path: 'src', depth: 0 });
     expect(topMap.files_count).toBe(2);
     expect(topMap.content).toContain('src/token.ts');
@@ -87,6 +90,14 @@ describe('Navigation tools (repoMap, symbolOutline, readSymbol, findReferences)'
     expect(methodBody.start_line).toBe(6);
     expect(methodBody.end_line).toBe(8);
     expect(methodBody.content).toContain('return text.length;');
+
+    const byName = readSymbol(store, {
+      rootDir: dir,
+      file: 'src/token.ts',
+      symbol: 'count',
+    });
+    expect(byName.symbol).toBe('TokenCounter.count');
+    expect(byName.content).toContain('return text.length;');
 
     const csMethod = readSymbol(store, {
       rootDir: dir,
