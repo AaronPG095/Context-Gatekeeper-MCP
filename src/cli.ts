@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createGatekeeperServer } from './server.js';
 import { ArtifactStore } from './store/artifacts.js';
-import { DEFAULT_DB_REL_PATH, openDatabase } from './store/db.js';
+import { getDefaultDbPath, openDatabase } from './store/db.js';
 import { fetchChunk } from './tools/fetch-chunk.js';
 import { runCompact } from './tools/run-compact.js';
 
@@ -55,7 +55,7 @@ async function runCliProxy(
   rootDir: string,
   dbPath?: string,
 ): Promise<void> {
-  const resolvedDb = dbPath ?? resolve(rootDir, DEFAULT_DB_REL_PATH);
+  const resolvedDb = dbPath ?? getDefaultDbPath(rootDir);
   const db = openDatabase(resolvedDb);
   const store = new ArtifactStore(db);
 

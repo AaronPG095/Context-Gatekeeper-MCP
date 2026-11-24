@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -146,4 +146,59 @@ describe('MCP stdio server & CLI proxy E2E', () => {
     );
     expect(fetchOut).toContain('L1: hello cli');
   });
+
+  it('navigates a second repo via optional root parameter without polluting it', async () => {
+    const dirA = mkdtempSync(join(tmpdir(), 'cgk-repo-a-'));
+    const dirB = mkdtempSync(join(tmpdir(), 'cgk-repo-b-'));
+    tempDirs.push(dirA, dirB);
+
+    mkdirSync(join(dirB, 'src'), { recursive: true });
+    writeFileSync(
+      join(dirB, 'src', 'calc.ts'),
+      [
+        'export function addNums(a: number, b: number): number {',
+        '  return a + b;',
+        '}',
+        'export function useAdd(): number {',
+        '  return addNums(2, 3);',
+        '}',
+      ].join('\n'),
+    );
+
+    const transport = new StdioClientTransport({
+      command: process.execPath,
+      args: [CLI_PATH, '--root', dirA],
+      env: process.env as Record<string, string>,
+      stderr: 'pipe',
+    });
+    transports.push(transport);
+
+    const client = new Client({ name: 'cgk-multi-repo-test', version: '0.1.0' });
+    await client.connect(transport);
+
+    const mapB = await client.callTool({ name: 'repo_map', arguments: { root: dirB } });
+    expect((mapB.content as Array<{ text: string }>)[0].text).toContain('src/calc.ts');
+
+    const outlineB = await client.callTool({
+      name: 'symbol_outline',
+      arguments: { file: 'src/calc.ts', root: dirB },
+    });
+    expect((outlineB.content as Array<{ text: string }>)[0].text).toContain('addNums');
+
+    const readB = await client.callTool({
+      name: 'read_symbol',
+      arguments: { file: 'src/calc.ts', symbol: 'addNums', root: dirB },
+    });
+    expect((readB.content as Array<{ text: string }>)[0].text).toContain('return a + b;');
+
+    const refsB = await client.callTool({
+      name: 'find_references',
+      arguments: { symbol: 'addNums', root: dirB },
+    });
+    expect((refsB.content as Array<{ text: string }>)[0].text).toContain('src/calc.ts:L5');
+
+    // Neither repo gets a .context-gatekeeper folder (OS cache dir is used).
+    expect(existsSync(join(dirA, '.context-gatekeeper'))).toBe(false);
+    expect(existsSync(join(dirB, '.context-gatekeeper'))).toBe(false);
+  }, 15_000);
 });

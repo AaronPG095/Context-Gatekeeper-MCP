@@ -5,7 +5,7 @@
 ```mermaid
 flowchart LR
     Agent["Coding Agent\n(Claude Code / Codex / Antigravity / Cursor)"]
-    Agent <-->|"MCP stdio (6 tools, 520 tokens)"| Server["src/server.ts\nMcpServer"]
+    Agent <-->|"MCP stdio (6 tools, 546 tokens)"| Server["src/server.ts\nMcpServer"]
 
     Server -->|"run_compact / fetch_chunk"| Runner["src/compress/\nPowerShell/POSIX + Rules"]
     Runner -->|"Raw lines + FTS5"| DB[(".context-gatekeeper/index.db\nnode:sqlite WAL + FTS5")]
@@ -24,7 +24,9 @@ flowchart LR
 
 ---
 
-## SQLite Schema (`.context-gatekeeper/index.db`)
+## SQLite Schema (`%LOCALAPPDATA%/context-gatekeeper/<repo-hash>.db`)
+
+SQLite databases are stored in the OS user cache directory (`%LOCALAPPDATA%\context-gatekeeper\<hash>.db` on Windows, `~/.cache/context-gatekeeper/<hash>.db` on POSIX) so target repositories never get untracked files.
 
 ### 1. Scratch Artifact & FTS5 Store
 - `artifacts (id, command, cwd, exit_code, duration_ms, raw_bytes, raw_lines, summary_bytes, created_at)`
@@ -43,7 +45,7 @@ Incremental indexing skips unchanged files in `O(1)` stat time via `mtime_ms`, f
 ## Measured Benchmarks (`gpt-tokenizer` `o200k_base`)
 
 ### Tool-Schema Overhead
-- Total `tools/list` JSON schema payload across all 6 tools: **520 `o200k_base` tokens**.
+- Total `tools/list` JSON schema payload across all 6 tools: **546 `o200k_base` tokens**.
 
 ### Output Compression (`npm run bench`)
 | Scenario | Raw Tokens | Compressed Tokens | Reduction | Diagnostics |
