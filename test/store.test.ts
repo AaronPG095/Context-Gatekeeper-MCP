@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { ArtifactStore } from '../src/store/artifacts.js';
-import { openDatabase } from '../src/store/db.js';
+import { getDefaultDbPath, openDatabase } from '../src/store/db.js';
 
 describe('ArtifactStore (node:sqlite FTS5)', () => {
   const dbs: Array<ReturnType<typeof openDatabase>> = [];
@@ -85,5 +85,15 @@ describe('ArtifactStore (node:sqlite FTS5)', () => {
     expect(store.getArtifact(ids[1])).toBeUndefined();
     expect(store.getArtifact(ids[2])).toBeDefined();
     expect(store.getArtifact(ids[3])).toBeDefined();
+  });
+
+  it('computes deterministic OS cache paths outside target repos', () => {
+    const p1 = getDefaultDbPath('C:\\Repos\\Alpha');
+    const p2 = getDefaultDbPath('C:\\Repos\\Alpha');
+    const p3 = getDefaultDbPath('C:\\Repos\\Beta');
+    expect(p1).toBe(p2);
+    expect(p1).not.toBe(p3);
+    expect(p1).toContain('context-gatekeeper');
+    expect(p1).not.toContain('Alpha');
   });
 });
