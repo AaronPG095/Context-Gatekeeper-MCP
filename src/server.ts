@@ -4,7 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { indexWorkspace } from './ast/indexer.js';
 import { ArtifactStore } from './store/artifacts.js';
-import { DEFAULT_DB_REL_PATH, openDatabase } from './store/db.js';
+import { getDefaultDbPath, openDatabase } from './store/db.js';
 import { SymbolStore } from './store/symbols.js';
 import { fetchChunk } from './tools/fetch-chunk.js';
 import { findReferences } from './tools/find-references.js';
@@ -27,6 +27,13 @@ export interface GatekeeperServerInstance {
   close: () => void;
 }
 
+interface WorkspaceContext {
+  rootDir: string;
+  db: DatabaseSync;
+  symbolStore: SymbolStore;
+  ensureIndexed: () => Promise<void>;
+}
+
 /**
  * Creates the Context-Gatekeeper MCP server with 6 low-schema-token tools
  * backed by SQLite FTS5 and incremental Tree-sitter WASM indexing.
@@ -34,30 +41,62 @@ export interface GatekeeperServerInstance {
 export function createGatekeeperServer(
   options: GatekeeperServerOptions = {},
 ): GatekeeperServerInstance {
-  const rootDir = resolve(options.rootDir ?? process.cwd());
-  const dbPath = options.dbPath ?? resolve(rootDir, DEFAULT_DB_REL_PATH);
+  const defaultRoot = resolve(options.rootDir ?? process.cwd());
+  const defaultDbPath = options.dbPath ?? getDefaultDbPath(defaultRoot);
   const indexTtlMs = options.indexTtlMs ?? 5_000;
 
-  const db = openDatabase(dbPath);
+  const db = openDatabase(defaultDbPath);
   const artifactStore = new ArtifactStore(db);
-  const symbolStore = new SymbolStore(db);
 
-  let lastIndexedAt = 0;
-  let inFlightIndex: Promise<void> | null = null;
+  const workspaces = new Map<string, WorkspaceContext>();
 
-  const ensureIndexed = async (): Promise<void> => {
-    const now = Date.now();
-    if (now - lastIndexedAt < indexTtlMs) return;
-    if (!inFlightIndex) {
-      inFlightIndex = indexWorkspace(symbolStore, rootDir)
-        .then(() => {
-          lastIndexedAt = Date.now();
-        })
-        .finally(() => {
-          inFlightIndex = null;
-        });
-    }
-    await inFlightIndex;
+  const createWorkspaceContext = (
+    wsRoot: string,
+    wsDb: DatabaseSync,
+  ): WorkspaceContext => {
+    const wsSymbolStore = new SymbolStore(wsDb);
+    let lastIndexedAt = 0;
+    let inFlightIndex: Promise<void> | null = null;
+
+    const ensureIndexed = async (): Promise<void> => {
+      const now = Date.now();
+      if (now - lastIndexedAt < indexTtlMs) return;
+      if (!inFlightIndex) {
+        inFlightIndex = indexWorkspace(wsSymbolStore, wsRoot)
+          .then(() => {
+            lastIndexedAt = Date.now();
+          })
+          .finally(() => {
+            inFlightIndex = null;
+          });
+      }
+      await inFlightIndex;
+    };
+
+    return {
+      rootDir: wsRoot,
+      db: wsDb,
+      symbolStore: wsSymbolStore,
+      ensureIndexed,
+    };
+  };
+
+  const toRootKey = (p: string) =>
+    process.platform === 'win32' ? p.toLowerCase() : p;
+
+  const defaultCtx = createWorkspaceContext(defaultRoot, db);
+  workspaces.set(toRootKey(defaultRoot), defaultCtx);
+
+  const getWorkspace = (requestedRoot?: string): WorkspaceContext => {
+    const target = resolve(requestedRoot ?? defaultRoot);
+    const key = toRootKey(target);
+    const existing = workspaces.get(key);
+    if (existing) return existing;
+
+    const wsDb = openDatabase(getDefaultDbPath(target));
+    const ctx = createWorkspaceContext(target, wsDb);
+    workspaces.set(key, ctx);
+    return ctx;
   };
 
   const server = new McpServer({
@@ -78,7 +117,7 @@ export function createGatekeeperServer(
     async ({ command, cwd, timeout_ms }) => {
       const res = await runCompact(artifactStore, {
         command,
-        cwd: cwd ?? rootDir,
+        cwd: cwd ?? defaultRoot,
         timeoutMs: timeout_ms,
       });
       return {
@@ -128,11 +167,13 @@ export function createGatekeeperServer(
       inputSchema: {
         path: z.string().optional(),
         depth: z.number().int().min(0).optional(),
+        root: z.string().optional(),
       },
     },
-    async ({ path, depth }) => {
-      await ensureIndexed();
-      const res = repoMap(symbolStore, { path, depth });
+    async ({ path, depth, root }) => {
+      const ws = getWorkspace(root);
+      await ws.ensureIndexed();
+      const res = repoMap(ws.symbolStore, { path, depth });
       return { content: [{ type: 'text', text: res.content }] };
     },
   );
@@ -143,11 +184,13 @@ export function createGatekeeperServer(
       description: 'List symbols, signatures, and line ranges in file (no bodies).',
       inputSchema: {
         file: z.string(),
+        root: z.string().optional(),
       },
     },
-    async ({ file }) => {
-      await ensureIndexed();
-      const res = symbolOutline(symbolStore, { file });
+    async ({ file, root }) => {
+      const ws = getWorkspace(root);
+      await ws.ensureIndexed();
+      const res = symbolOutline(ws.symbolStore, { file });
       return { content: [{ type: 'text', text: res.content }] };
     },
   );
@@ -159,11 +202,13 @@ export function createGatekeeperServer(
       inputSchema: {
         file: z.string(),
         symbol: z.string(),
+        root: z.string().optional(),
       },
     },
-    async ({ file, symbol }) => {
-      await ensureIndexed();
-      const res = readSymbol(symbolStore, { rootDir, file, symbol });
+    async ({ file, symbol, root }) => {
+      const ws = getWorkspace(root);
+      await ws.ensureIndexed();
+      const res = readSymbol(ws.symbolStore, { rootDir: ws.rootDir, file, symbol });
       return {
         content: [
           {
@@ -182,11 +227,13 @@ export function createGatekeeperServer(
       inputSchema: {
         symbol: z.string(),
         limit: z.number().int().positive().optional(),
+        root: z.string().optional(),
       },
     },
-    async ({ symbol, limit }) => {
-      await ensureIndexed();
-      const res = findReferences(symbolStore, { symbol, limit });
+    async ({ symbol, limit, root }) => {
+      const ws = getWorkspace(root);
+      await ws.ensureIndexed();
+      const res = findReferences(ws.symbolStore, { symbol, limit });
       return { content: [{ type: 'text', text: res.content }] };
     },
   );
@@ -195,9 +242,18 @@ export function createGatekeeperServer(
     server,
     db,
     artifactStore,
-    symbolStore,
+    symbolStore: defaultCtx.symbolStore,
     close: () => {
-      db.close();
+      const closed = new Set<DatabaseSync>();
+      for (const ctx of workspaces.values()) {
+        if (!closed.has(ctx.db)) {
+          ctx.db.close();
+          closed.add(ctx.db);
+        }
+      }
+      if (!closed.has(db)) {
+        db.close();
+      }
     },
   };
 }

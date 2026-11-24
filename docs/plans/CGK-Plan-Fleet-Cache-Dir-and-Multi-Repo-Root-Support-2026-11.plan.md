@@ -39,7 +39,7 @@ None
 ## Steps
 
 - [x] Implement `getDefaultDbPath(rootDir)` in `src/store/db.ts`, export from `src/index.ts`, update `src/cli.ts`, and commit. (AC1) verified: getDefaultDbPath implemented in db.ts, exported, and wired into cli.ts
-- [ ] Add per-root `WorkspaceContext` caching and optional `root` param on the 4 navigation tools in `src/server.ts`, and commit. (AC2)
+- [x] Add per-root `WorkspaceContext` caching and optional `root` param on the 4 navigation tools in `src/server.ts`, and commit. (AC2) verified: per-root WorkspaceContext caching + optional root param added to all 4 nav tools
 - [ ] Add unit & E2E tests in `test/store.test.ts` and `test/mcp-server.test.ts`, update `README.md` & `docs/ARCHITECTURE.md`, and commit. (AC1, AC2, AC3, AC4)
 - [ ] Run full verification (`typecheck`, `build`, `test`, `bench`), tick criteria with evidence, run independent sub-agent review (`pack --test` + `review`), verify `ticket.mjs check`, and open GitHub PR via `ticket.mjs pr`. (AC1, AC2, AC3, AC4)
 
