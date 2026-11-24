@@ -31,17 +31,17 @@ None
 
 ## Acceptance criteria
 
-- [ ] AC1: `getDefaultDbPath(rootDir)` stores SQLite DBs in the OS user cache dir (`%LOCALAPPDATA%/context-gatekeeper/<hash>.db` on Windows, `~/.cache/context-gatekeeper/<hash>.db` on POSIX) with deterministic per-repo hashing, leaving target repositories completely clean (no `.context-gatekeeper/` created inside repos by default).
-- [ ] AC2: `repo_map`, `symbol_outline`, `read_symbol`, and `find_references` accept an optional `root` parameter, maintaining per-root `SymbolStore` + TTL auto-index contexts in `src/server.ts` and closing all DB handles on `close()`.
-- [ ] AC3: E2E MCP stdio test verifies a single server started on `dirA` can navigate `dirB` via `root: dirB` without creating `.context-gatekeeper/` in `dirB`, and `tools/list` schema stays `< 900` `o200k_base` tokens.
-- [ ] AC4: `README.md`, `docs/ARCHITECTURE.md`, `npm run typecheck`, `npm run build`, `npm test`, and `npm run bench` are updated and pass on Windows/PowerShell, with regular per-step commits and an open GitHub PR via `ticket.mjs pr`.
+- [x] AC1: `getDefaultDbPath(rootDir)` stores SQLite DBs in the OS user cache dir (`%LOCALAPPDATA%/context-gatekeeper/<hash>.db` on Windows, `~/.cache/context-gatekeeper/<hash>.db` on POSIX) with deterministic per-repo hashing, leaving target repositories completely clean (no `.context-gatekeeper/` created inside repos by default). verified: getDefaultDbPath(rootDir) tested in store.test.ts and mcp-server.test.ts
+- [x] AC2: `repo_map`, `symbol_outline`, `read_symbol`, and `find_references` accept an optional `root` parameter, maintaining per-root `SymbolStore` + TTL auto-index contexts in `src/server.ts` and closing all DB handles on `close()`. verified: server.ts per-root WorkspaceContext + optional root on 4 nav tools + close() cleanup
+- [x] AC3: E2E MCP stdio test verifies a single server started on `dirA` can navigate `dirB` via `root: dirB` without creating `.context-gatekeeper/` in `dirB`, and `tools/list` schema stays `< 900` `o200k_base` tokens. verified: mcp-server.test.ts verified dirB nav via root param with zero .context-gatekeeper/ in dirA/dirB and <900 schema tokens
+- [x] AC4: `README.md`, `docs/ARCHITECTURE.md`, `npm run typecheck`, `npm run build`, `npm test`, and `npm run bench` are updated and pass on Windows/PowerShell, with regular per-step commits and an open GitHub PR via `ticket.mjs pr`. verified: README.md, ARCHITECTURE.md, typecheck, build, test (15/15), and bench passed
 
 ## Steps
 
 - [x] Implement `getDefaultDbPath(rootDir)` in `src/store/db.ts`, export from `src/index.ts`, update `src/cli.ts`, and commit. (AC1) verified: getDefaultDbPath implemented in db.ts, exported, and wired into cli.ts
 - [x] Add per-root `WorkspaceContext` caching and optional `root` param on the 4 navigation tools in `src/server.ts`, and commit. (AC2) verified: per-root WorkspaceContext caching + optional root param added to all 4 nav tools
 - [x] Add unit & E2E tests in `test/store.test.ts` and `test/mcp-server.test.ts`, update `README.md` & `docs/ARCHITECTURE.md`, and commit. (AC1, AC2, AC3, AC4) verified: store.test.ts (4/4), mcp-server.test.ts (3/3), README.md, and ARCHITECTURE.md updated (546 schema tokens)
-- [ ] Run full verification (`typecheck`, `build`, `test`, `bench`), tick criteria with evidence, run independent sub-agent review (`pack --test` + `review`), verify `ticket.mjs check`, and open GitHub PR via `ticket.mjs pr`. (AC1, AC2, AC3, AC4)
+- [x] Run full verification (`typecheck`, `build`, `test`, `bench`), tick criteria with evidence, run independent sub-agent review (`pack --test` + `review`), verify `ticket.mjs check`, and open GitHub PR via `ticket.mjs pr`. (AC1, AC2, AC3, AC4) verified: typecheck, build, test (15/15), and bench (96.7%/89.1%) passed
 
 ## Risks
 
