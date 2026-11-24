@@ -1,7 +1,7 @@
 ---
 title: Plan - Feature: Fleet Cache Dir and Multi-Repo Root Support
 ticket: local://CGK:CGK-Plan-Fleet-Cache-Dir-and-Multi-Repo-Root-Support-2026-11
-status: in-progress
+status: shipped
 priority: 
 state: 
 due: 
@@ -19,6 +19,7 @@ reviewVerdict: pass
 reviewSession: 0e11c274-37b7-46fc-91c9-6efd31653f7a
 baseBranch: main
 reviewFingerprint: 4a24730ab0672bc83ef6e4b63e696b29b650d395eda39d0aabefb10a24188da1
+pr: https://github.com/AaronPG095/Context-Gatekeeper-MCP/pull/3
 ---
 # Fleet Cache Dir and Multi-Repo Root Support
 
