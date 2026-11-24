@@ -77,3 +77,8 @@ export {
   type FindReferencesInput,
   type FindReferencesResult,
 } from './tools/find-references.js';
+export {
+  createGatekeeperServer,
+  type GatekeeperServerInstance,
+  type GatekeeperServerOptions,
+} from './server.js';
