@@ -15,11 +15,13 @@ export function compressGeneric(lines: OutputLine[], exitCode: number): string {
   for (let i = 0; i < lines.length; i += 1) {
     const lineNo = i + 1;
     const text = lines[i].text.trimEnd();
-    if (!text.trim() || PROGRESS_NOISE_RE.test(text)) continue;
+    if (!text.trim()) continue;
 
-    if (ERROR_LINE_RE.test(text) && errorLines.length < 25) {
+    const isError = ERROR_LINE_RE.test(text);
+    if (isError && errorLines.length < 25) {
       errorLines.push(`L${lineNo}: ${text.trim()}`);
     }
+    if (!isError && PROGRESS_NOISE_RE.test(text)) continue;
 
     const prev = deduped[deduped.length - 1];
     if (prev && prev.text === text) {

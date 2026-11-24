@@ -51,11 +51,13 @@ describe('compressOutput', () => {
       { stream: 'stdout' as const, text: 'heartbeat ok' },
       { stream: 'stdout' as const, text: 'heartbeat ok' },
       { stream: 'stdout' as const, text: 'heartbeat ok' },
+      { stream: 'stderr' as const, text: 'Fetching https://example.com/pkg failed: 404' },
       { stream: 'stderr' as const, text: 'fatal: connection refused' },
     ];
     const res = compressOutput('custom-cli --watch', lines, 1);
     expect(res.rule).toBe('generic');
     expect(res.summary).toContain('heartbeat ok (x3)');
+    expect(res.summary).toContain('Fetching https://example.com/pkg failed: 404');
     expect(res.summary).toContain('fatal: connection refused');
   });
 });

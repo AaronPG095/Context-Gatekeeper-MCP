@@ -1,4 +1,4 @@
-import { encode } from 'gpt-tokenizer';
+import { encode } from 'gpt-tokenizer/encoding/o200k_base';
 import { compressOutput } from '../src/compress/registry.js';
 import { getAllBenchmarkFixtures } from './fixtures.js';
 

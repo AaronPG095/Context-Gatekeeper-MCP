@@ -24,8 +24,12 @@ export function parseLineRange(
   range: [number, number] | string,
 ): [number, number] {
   if (Array.isArray(range)) {
-    const start = Math.max(1, Math.floor(range[0]));
-    const end = Math.max(start, Math.floor(range[1]));
+    const [rawStart, rawEnd] = range;
+    if (!Number.isFinite(rawStart) || !Number.isFinite(rawEnd)) {
+      throw new Error('Invalid line_range array: values must be finite numbers.');
+    }
+    const start = Math.max(1, Math.floor(rawStart));
+    const end = Math.max(start, Math.floor(rawEnd));
     return [start, end];
   }
   const match = range.trim().match(/^(\d+)\s*(?:\.\.|-|:)\s*(\d+)$/);

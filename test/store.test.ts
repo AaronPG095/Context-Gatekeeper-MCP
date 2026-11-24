@@ -59,6 +59,10 @@ describe('ArtifactStore (node:sqlite FTS5)', () => {
     const hits = store.searchLines(record.id, 'TS2345', { contextLines: 1 });
     expect(hits.map((h) => h.line_no)).toEqual([1, 2, 3, 4, 5]);
     expect(hits.filter((h) => h.isMatch).map((h) => h.line_no)).toEqual([2, 4]);
+
+    // Multi-word non-contiguous query only succeeds via FTS5 (not LIKE substring fallback).
+    const multiWordHits = store.searchLines(record.id, 'TS2345 mismatch', { contextLines: 0 });
+    expect(multiWordHits.map((h) => h.line_no)).toEqual([2, 4]);
   });
 
   it('evicts oldest artifacts beyond maxArtifacts', () => {

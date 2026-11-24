@@ -64,10 +64,16 @@ export async function runCommand(
     let timedOut = false;
 
     const pushChunk = (stream: OutputStream, raw: string) => {
-      const text = stripAnsi(remainders[stream] + raw);
-      const parts = text.split('\n');
-      remainders[stream] = parts.pop() ?? '';
-      for (const part of parts) {
+      const combined = remainders[stream] + raw;
+      const lastNl = combined.lastIndexOf('\n');
+      if (lastNl === -1) {
+        remainders[stream] = combined;
+        return;
+      }
+      const complete = combined.slice(0, lastNl);
+      remainders[stream] = combined.slice(lastNl + 1);
+      const cleaned = stripAnsi(complete);
+      for (const part of cleaned.split('\n')) {
         lines.push({ stream, text: part });
       }
     };
@@ -92,7 +98,9 @@ export async function runCommand(
       if (timer) clearTimeout(timer);
       for (const stream of ['stdout', 'stderr'] as const) {
         if (remainders[stream].length > 0) {
-          lines.push({ stream, text: remainders[stream] });
+          for (const part of stripAnsi(remainders[stream]).split('\n')) {
+            lines.push({ stream, text: part });
+          }
         }
       }
       if (timedOut) {

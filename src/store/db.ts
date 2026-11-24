@@ -36,7 +36,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS artifact_lines_fts USING fts5(
   line_no UNINDEXED,
   content='artifact_lines',
   content_rowid='id',
-  tokenize='unicode61 tokenchars ''_.-:/'''
+  tokenize='unicode61 tokenchars ''_.-/'''
 );
 
 CREATE TRIGGER IF NOT EXISTS artifact_lines_ai AFTER INSERT ON artifact_lines BEGIN
