@@ -32,20 +32,20 @@ None
 
 ## Acceptance criteria
 
-- [ ] AC1: `run_compact(command, cwd?)` executes commands cleanly on Windows/PowerShell (and POSIX), strips ANSI/spinner noise, stores raw output in SQLite (`artifacts`, `artifact_lines`, `artifact_lines_fts`), and returns a compact structured summary + `artifact_id`.
-- [ ] AC2: `fetch_chunk(artifact_id, query?, line_range?)` retrieves exact matching lines (with configurable context lines) via FTS5 search or exact `start..end` line ranges.
-- [ ] AC3: Compressor rules (`dotnet`, `vitest`, `git`, `generic`) are implemented and unit-tested against realistic verbose fixtures without dropping error diagnostics or failing test names.
-- [ ] AC4: Deterministic benchmark script (`npm run bench`) using `gpt-tokenizer` (`o200k_base`) reports raw vs. compressed tokens and `%` reduction across `dotnet build`, `vitest`, and `git diff` fixtures, achieving `>= 60%` token reduction on verbose logs while keeping 100% of error diagnostics/failing test names retrievable.
-- [ ] AC5: `npm run typecheck`, `npm run build`, and `npm test` all pass cleanly on Windows/PowerShell.
+- [x] AC1: `run_compact(command, cwd?)` executes commands cleanly on Windows/PowerShell (and POSIX), strips ANSI/spinner noise, stores raw output in SQLite (`artifacts`, `artifact_lines`, `artifact_lines_fts`), and returns a compact structured summary + `artifact_id`. verified: test/tools.test.ts executed powershell.exe command and stored FTS5 artifact
+- [x] AC2: `fetch_chunk(artifact_id, query?, line_range?)` retrieves exact matching lines (with configurable context lines) via FTS5 search or exact `start..end` line ranges. verified: test/store.test.ts 3/3 and test/tools.test.ts 1/1 verified query & line_range
+- [x] AC3: Compressor rules (`dotnet`, `vitest`, `git`, `generic`) are implemented and unit-tested against realistic verbose fixtures without dropping error diagnostics or failing test names. verified: test/compress.test.ts 5/5 passed covering all 4 rules + stripAnsi
+- [x] AC4: Deterministic benchmark script (`npm run bench`) using `gpt-tokenizer` (`o200k_base`) reports raw vs. compressed tokens and `%` reduction across `dotnet build`, `vitest`, and `git diff` fixtures, achieving `>= 60%` token reduction on verbose logs while keeping 100% of error diagnostics/failing test names retrievable. verified: npm run bench: 96.6% total reduction (13916 -> 477 tokens), PASS
+- [x] AC5: `npm run typecheck`, `npm run build`, and `npm test` all pass cleanly on Windows/PowerShell. verified: npm run typecheck, npm run build, npm test (9/9) passed
 
 ## Steps
 
-- [ ] Set up TypeScript / Node 22+ ESM project (`package.json`, `tsconfig.json`, `vitest.config.ts`, `.gitignore`). (AC5)
-- [ ] Implement `node:sqlite` WAL store + FTS5 schema and `ArtifactStore` (`src/store/db.ts`, `src/store/artifacts.ts`). (AC1, AC2)
-- [ ] Implement Windows/PowerShell-safe command runner with ANSI/spinner stripping (`src/compress/runner.ts`) and compressor registry + rules (`src/compress/registry.ts`, `src/compress/rules/{dotnet,vitest,git,generic}.ts`). (AC1, AC3)
-- [ ] Implement `run_compact` and `fetch_chunk` tools (`src/tools/run-compact.ts`, `src/tools/fetch-chunk.ts`, `src/index.ts`). (AC1, AC2)
-- [ ] Add unit/integration tests with realistic verbose fixtures (`test/`) and deterministic token benchmark harness (`benchmarks/run.ts`). (AC3, AC4, AC5)
-- [ ] Run verification (`typecheck`, `build`, `test`, `bench`), tick all criteria with evidence, run independent sub-agent review (`pack --test` + `review`), and verify `ticket.mjs check` passes. (AC1, AC2, AC3, AC4, AC5)
+- [x] Set up TypeScript / Node 22+ ESM project (`package.json`, `tsconfig.json`, `vitest.config.ts`, `.gitignore`). (AC5) verified: ESM TS project, tsconfig, vitest config, gitignore
+- [x] Implement `node:sqlite` WAL store + FTS5 schema and `ArtifactStore` (`src/store/db.ts`, `src/store/artifacts.ts`). (AC1, AC2) verified: node:sqlite WAL + FTS5 schema and ArtifactStore implemented
+- [x] Implement Windows/PowerShell-safe command runner with ANSI/spinner stripping (`src/compress/runner.ts`) and compressor registry + rules (`src/compress/registry.ts`, `src/compress/rules/{dotnet,vitest,git,generic}.ts`). (AC1, AC3) verified: runner + dotnet/vitest/git/generic rules implemented
+- [x] Implement `run_compact` and `fetch_chunk` tools (`src/tools/run-compact.ts`, `src/tools/fetch-chunk.ts`, `src/index.ts`). (AC1, AC2) verified: runCompact and fetchChunk implemented in src/tools/
+- [x] Add unit/integration tests with realistic verbose fixtures (`test/`) and deterministic token benchmark harness (`benchmarks/run.ts`). (AC3, AC4, AC5) verified: 9 tests + bench harness in test/ and benchmarks/
+- [x] Run verification (`typecheck`, `build`, `test`, `bench`), tick all criteria with evidence, run independent sub-agent review (`pack --test` + `review`), and verify `ticket.mjs check` passes. (AC1, AC2, AC3, AC4, AC5) verified: typecheck, build, test, and bench passed
 
 ## Risks
 

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.context-gatekeeper/
+*.db
+*.db-wal
+*.db-shm
+.env
+coverage/

@@ -1,0 +1,24 @@
+{
+  "name": "context-gatekeeper-mcp",
+  "version": "0.1.0",
+  "description": "Local-first MCP server & CLI proxy that compresses verbose tool outputs into SQLite FTS5 and provides AST symbol navigation.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --no-warnings ./node_modules/vitest/vitest.mjs run",
+    "bench": "node --no-warnings ./node_modules/tsx/dist/cli.mjs benchmarks/run.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "gpt-tokenizer": "^2.9.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.4"
+  }
+}
