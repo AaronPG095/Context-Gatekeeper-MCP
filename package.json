@@ -6,11 +6,20 @@
   "engines": {
     "node": ">=22.5.0"
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "bin": {
+    "context-gatekeeper-mcp": "./dist/src/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "docs/ARCHITECTURE.md"
+  ],
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
+    "pretest": "npm run build",
     "test": "node --no-warnings ./node_modules/vitest/vitest.mjs run",
     "bench": "node --no-warnings ./node_modules/tsx/dist/cli.mjs benchmarks/run.ts"
   },
@@ -22,7 +31,9 @@
     "vitest": "^3.1.4"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "tree-sitter-wasms": "^0.1.13",
-    "web-tree-sitter": "^0.24.7"
+    "web-tree-sitter": "^0.24.7",
+    "zod": "^4.6.7"
   }
 }

@@ -39,7 +39,7 @@ None
 
 ## Steps
 
-- [ ] Install `@modelcontextprotocol/sdk` and `zod`, update `package.json` (`bin`, `main`, `types`, `files`, `pretest`), and commit. (AC1, AC5)
+- [x] Install `@modelcontextprotocol/sdk` and `zod`, update `package.json` (`bin`, `main`, `types`, `files`, `pretest`), and commit. (AC1, AC5) verified: @modelcontextprotocol/sdk + zod installed and package.json bin/files/pretest configured
 - [ ] Implement `src/server.ts` (6 low-schema-token MCP tools + auto-indexing) and `src/cli.ts` (MCP stdio + `run`/`fetch` CLI proxy), export from `src/index.ts`, and commit. (AC1, AC2)
 - [ ] Add E2E MCP stdio test (`test/mcp-server.test.ts`) verifying all 6 tools and `< 900` `o200k_base` schema tokens, and commit. (AC1, AC2, AC3)
 - [ ] Write `README.md` and `docs/ARCHITECTURE.md` with Windows-safe client configs (Claude Code, Codex, Antigravity, Cursor), architecture diagram, measured benchmarks, and `TokenHUD` cross-check methodology, and commit. (AC4)
