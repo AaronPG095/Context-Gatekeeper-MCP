@@ -44,6 +44,7 @@ describe('MCP stdio server & CLI proxy E2E', () => {
     const transport = new StdioClientTransport({
       command: process.execPath,
       args: [CLI_PATH, '--root', dir, '--db', dbPath],
+      env: process.env as Record<string, string>,
       stderr: 'pipe',
     });
     transports.push(transport);
