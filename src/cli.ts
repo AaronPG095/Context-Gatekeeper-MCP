@@ -32,7 +32,8 @@ function parseGlobalFlags(argv: string[]): {
     } else if (arg === '--db' && argv[i + 1]) {
       dbPath = argv[++i];
     } else {
-      rest.push(arg);
+      rest.push(...argv.slice(i));
+      break;
     }
   }
   return { rootDir, dbPath, rest };
@@ -119,6 +120,12 @@ async function main(): Promise<void> {
 
   if (sub === 'run' || sub === 'fetch') {
     await runCliProxy(sub, rest.slice(1), rootDir, dbPath);
+    return;
+  }
+
+  if (sub !== undefined && sub !== 'serve') {
+    printHelp();
+    process.exitCode = 1;
     return;
   }
 

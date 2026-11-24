@@ -3,7 +3,7 @@
 A local-first **MCP server + CLI proxy** for coding agents (**Claude Code**, **OpenAI Codex**, **Google Antigravity / Gemini**, and **Cursor**) that cuts token burn by **89–97%** on verbose tool outputs and multi-file code exploration—without sacrificing accuracy.
 
 - **Zero native build dependencies on Windows:** Runs on **Node.js 22+** using built-in `node:sqlite` (FTS5) and `web-tree-sitter` (WASM).
-- **Ultra-lean tool surface:** 6 crisp tools totaling **488 `o200k_base` tokens** for the entire `tools/list` schema payload.
+- **Ultra-lean tool surface:** 6 crisp tools totaling **520 `o200k_base` tokens** for the entire `tools/list` schema payload.
 
 ---
 

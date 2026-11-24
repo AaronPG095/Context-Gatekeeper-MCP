@@ -126,16 +126,24 @@ describe('MCP stdio server & CLI proxy E2E', () => {
     expect(stderrText).not.toContain('ExperimentalWarning');
   }, 15_000);
 
-  it('supports CLI proxy run subcommand', () => {
+  it('supports CLI proxy run and fetch subcommands', () => {
     const dir = mkdtempSync(join(tmpdir(), 'cgk-cli-proxy-'));
     tempDirs.push(dir);
     const dbPath = join(dir, 'cli.db');
-    const out = execFileSync(
+    const runOut = execFileSync(
       process.execPath,
       [CLI_PATH, '--root', dir, '--db', dbPath, 'run', 'node -e "console.log(\'hello cli\')"'],
       { encoding: 'utf8' },
     );
-    expect(out).toMatch(/artifact_id=art_[0-9a-f]{8}/);
-    expect(out).toContain('hello cli');
+    const idMatch = runOut.match(/artifact_id=(art_[0-9a-f]{8})/);
+    expect(idMatch).not.toBeNull();
+    expect(runOut).toContain('hello cli');
+
+    const fetchOut = execFileSync(
+      process.execPath,
+      [CLI_PATH, '--root', dir, '--db', dbPath, 'fetch', idMatch![1], '--range', '1..1'],
+      { encoding: 'utf8' },
+    );
+    expect(fetchOut).toContain('L1: hello cli');
   });
 });

@@ -41,7 +41,7 @@ None
 
 - [x] Install `@modelcontextprotocol/sdk` and `zod`, update `package.json` (`bin`, `main`, `types`, `files`, `pretest`), and commit. (AC1, AC5) verified: @modelcontextprotocol/sdk + zod installed and package.json bin/files/pretest configured
 - [x] Implement `src/server.ts` (6 low-schema-token MCP tools + auto-indexing) and `src/cli.ts` (MCP stdio + `run`/`fetch` CLI proxy), export from `src/index.ts`, and commit. (AC1, AC2) verified: server.ts (6 tools + auto-indexing) and cli.ts (stdio + run/fetch) implemented
-- [x] Add E2E MCP stdio test (`test/mcp-server.test.ts`) verifying all 6 tools and `< 900` `o200k_base` schema tokens, and commit. (AC1, AC2, AC3) verified: test/mcp-server.test.ts 2/2 passed; tools/list schema = 488 o200k_base tokens
+- [x] Add E2E MCP stdio test (`test/mcp-server.test.ts`) verifying all 6 tools and `< 900` `o200k_base` schema tokens, and commit. (AC1, AC2, AC3) verified: test/mcp-server.test.ts 2/2 passed; tools/list schema = 520 o200k_base tokens
 - [x] Write `README.md` and `docs/ARCHITECTURE.md` with Windows-safe client configs (Claude Code, Codex, Antigravity, Cursor), architecture diagram, measured benchmarks, and `TokenHUD` cross-check methodology, and commit. (AC4) verified: README.md and docs/ARCHITECTURE.md written with client configs, schema, and measured benchmarks
 - [x] Run verification (`typecheck`, `build`, `test`, `bench`), tick all criteria with evidence, run independent sub-agent review (`pack --test` + `review`), verify `ticket.mjs check`, and open GitHub PR via `ticket.mjs pr`. (AC1, AC2, AC3, AC4, AC5) verified: All checks passed; ready for independent review and PR
 
