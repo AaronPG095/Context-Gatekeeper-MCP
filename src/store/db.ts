@@ -1,8 +1,25 @@
+import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { homedir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 export const DEFAULT_DB_REL_PATH = join('.context-gatekeeper', 'index.db');
+
+/**
+ * Computes a deterministic OS user-cache SQLite path for `rootDir` so target
+ * repositories never get untracked `.context-gatekeeper/` files.
+ */
+export function getDefaultDbPath(rootDir: string = process.cwd()): string {
+  const normRoot = resolve(rootDir);
+  const key = process.platform === 'win32' ? normRoot.toLowerCase() : normRoot;
+  const hash = createHash('sha256').update(key).digest('hex').slice(0, 12);
+  const cacheBase =
+    process.platform === 'win32'
+      ? process.env.LOCALAPPDATA || join(homedir(), 'AppData', 'Local')
+      : process.env.XDG_CACHE_HOME || join(homedir(), '.cache');
+  return join(cacheBase, 'context-gatekeeper', `${hash}.db`);
+}
 
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS artifacts (
@@ -91,7 +108,7 @@ CREATE INDEX IF NOT EXISTS idx_symbol_refs_name ON symbol_refs(symbol_name);
  * Opens (and initializes if needed) the Context Gatekeeper SQLite database
  * using Node's built-in `node:sqlite` (`DatabaseSync`) with FTS5 enabled.
  */
-export function openDatabase(dbPath: string = DEFAULT_DB_REL_PATH): DatabaseSync {
+export function openDatabase(dbPath: string = getDefaultDbPath()): DatabaseSync {
   const isMemory = dbPath === ':memory:' || dbPath.startsWith('file::memory:');
   if (!isMemory) {
     mkdirSync(dirname(dbPath), { recursive: true });

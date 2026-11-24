@@ -1,4 +1,8 @@
-export { openDatabase, DEFAULT_DB_REL_PATH } from './store/db.js';
+export {
+  openDatabase,
+  getDefaultDbPath,
+  DEFAULT_DB_REL_PATH,
+} from './store/db.js';
 export {
   ArtifactStore,
   buildSafeFtsQuery,
