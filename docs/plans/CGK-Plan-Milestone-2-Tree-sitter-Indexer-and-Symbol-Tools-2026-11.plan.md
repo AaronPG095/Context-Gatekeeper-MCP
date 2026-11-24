@@ -1,7 +1,7 @@
 ---
 title: Plan - Feature: Milestone 2 Tree-sitter Indexer and Symbol Tools
 ticket: local://CGK:CGK-Plan-Milestone-2-Tree-sitter-Indexer-and-Symbol-Tools-2026-11
-status: in-progress
+status: shipped
 priority: 
 state: 
 due: 
@@ -19,6 +19,7 @@ reviewVerdict: pass
 reviewSession: c5b7bdf5-9ae2-4f20-9384-5739e88b7816
 baseBranch: main
 reviewFingerprint: 9a58ddc6a23a179c33a1c90c6ecdc1b80cdb67112add9b21fec70bb5a89886e8
+pr: https://github.com/AaronPG095/Context-Gatekeeper-MCP/pull/1
 ---
 # Milestone 2 Tree-sitter Indexer and Symbol Tools
 
