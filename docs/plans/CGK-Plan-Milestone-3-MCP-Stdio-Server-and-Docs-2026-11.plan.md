@@ -31,7 +31,7 @@ None
 
 ## Acceptance criteria
 
-- [ ] AC1: MCP stdio server (`src/server.ts` + `src/cli.ts`) exposes all 6 tools with minimal JSON schemas (`< 900` total `o200k_base` tokens for the entire `tools/list` schema payload) and clean stdio (no stdout corruption or SQLite warning noise).
+- [x] AC1: MCP stdio server (`src/server.ts` + `src/cli.ts`) exposes all 6 tools with minimal JSON schemas (`< 900` total `o200k_base` tokens for the entire `tools/list` schema payload) and clean stdio (no stdout corruption or SQLite warning noise). verified: server.ts, cli.ts, and index.ts typechecked and built cleanly
 - [ ] AC2: Navigation tools auto-index the workspace incrementally on first call / when stale, and `cli.ts` supports `--root <dir>` and `--db <path>` plus `run` / `fetch` CLI proxy subcommands.
 - [ ] AC3: End-to-end MCP stdio test (`test/mcp-server.test.ts`) connects a real MCP client over stdio to the built server, verifying `tools/list` and tool calls across both compression and AST navigation flows on Windows/PowerShell.
 - [ ] AC4: `README.md` and `docs/ARCHITECTURE.md` document Windows-safe drop-in MCP config snippets for Claude Code, Codex, Antigravity, and Cursor, architecture overview, and measured `o200k_base` token-savings benchmarks + `TokenHUD` cross-check steps.
