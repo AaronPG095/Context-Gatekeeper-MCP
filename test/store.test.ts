@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ArtifactStore } from '../src/store/artifacts.js';
 import { getDefaultDbPath, openDatabase } from '../src/store/db.js';
@@ -95,5 +99,43 @@ describe('ArtifactStore (node:sqlite FTS5)', () => {
     expect(p1).not.toBe(p3);
     expect(p1).toContain('context-gatekeeper');
     expect(p1).not.toContain('Alpha');
+  });
+
+  it('migrates legacy pre-v0.2 databases missing summary_text via ALTER TABLE', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'cgk-legacy-db-'));
+    const dbPath = join(dir, 'legacy.db');
+    try {
+      const legacy = new DatabaseSync(dbPath);
+      legacy.exec(`
+        CREATE TABLE artifacts (
+          id TEXT PRIMARY KEY,
+          command TEXT NOT NULL,
+          cwd TEXT NOT NULL,
+          exit_code INTEGER NOT NULL,
+          duration_ms INTEGER NOT NULL,
+          raw_bytes INTEGER NOT NULL,
+          raw_lines INTEGER NOT NULL,
+          summary_bytes INTEGER NOT NULL,
+          created_at INTEGER NOT NULL
+        );
+      `);
+      legacy.close();
+
+      const migrated = openDatabase(dbPath);
+      dbs.push(migrated);
+      const store = new ArtifactStore(migrated);
+      const rec = store.saveArtifact({
+        command: 'echo ok',
+        cwd: dir,
+        exitCode: 0,
+        durationMs: 1,
+        summaryText: 'ok',
+        lines: [{ stream: 'stdout', text: 'ok' }],
+      });
+      expect(rec.summary_text).toBe('ok');
+    } finally {
+      while (dbs.length > 0) dbs.pop()?.close();
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

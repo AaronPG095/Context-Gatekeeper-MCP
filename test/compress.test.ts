@@ -60,4 +60,57 @@ describe('compressOutput', () => {
     expect(res.summary).toContain('Fetching https://example.com/pkg failed: 404');
     expect(res.summary).toContain('fatal: connection refused');
   });
+
+  it('compresses tsc, eslint, pytest, and folds large JSON arrays', () => {
+    const tscRes = compressOutput(
+      'npx tsc --noEmit',
+      [
+        { stream: 'stdout', text: 'src/a.ts(10,3): error TS2345: Bad arg' },
+        { stream: 'stdout', text: 'src/b.ts(20,5): error TS2345: Bad arg 2' },
+        { stream: 'stdout', text: 'Found 2 errors in 2 files.' },
+      ],
+      2,
+    );
+    expect(tscRes.rule).toBe('tsc');
+    expect(tscRes.summary).toContain('TS2345 x2');
+    expect(tscRes.summary).toContain('Found 2 errors');
+
+    const lintRes = compressOutput(
+      'npx eslint src',
+      [
+        { stream: 'stdout', text: 'C:\\repo\\src\\a.ts' },
+        { stream: 'stdout', text: '  4:9  error  Unexpected any  @typescript-eslint/no-explicit-any' },
+        { stream: 'stdout', text: '  8:1  warning  Unused var  no-unused-vars' },
+        { stream: 'stdout', text: '  9:1  warning  Unused var  no-unused-vars' },
+        { stream: 'stdout', text: '✖ 3 problems (1 error, 2 warnings)' },
+      ],
+      1,
+    );
+    expect(lintRes.rule).toBe('eslint');
+    expect(lintRes.summary).toContain('@typescript-eslint/no-explicit-any');
+    expect(lintRes.summary).toContain('no-unused-vars x2');
+
+    const pytestRes = compressOutput(
+      'pytest -q',
+      [
+        { stream: 'stdout', text: '....' },
+        { stream: 'stdout', text: 'FAILED tests/test_auth.py::test_expired - AssertionError' },
+        { stream: 'stdout', text: 'E   assert 401 == 200' },
+        { stream: 'stdout', text: '=== 1 failed, 12 passed in 0.41s ===' },
+      ],
+      1,
+    );
+    expect(pytestRes.rule).toBe('pytest');
+    expect(pytestRes.summary).toContain('test_expired');
+    expect(pytestRes.summary).toContain('1 failed, 12 passed');
+
+    const jsonItems = Array.from({ length: 10 }, (_, i) => ({ id: i, name: `item-${i}` }));
+    const jsonRes = compressOutput(
+      'gh api /repos/a/b/issues',
+      [{ stream: 'stdout', text: JSON.stringify(jsonItems, null, 2) }],
+      0,
+    );
+    expect(jsonRes.rule).toBe('generic');
+    expect(jsonRes.summary).toContain('Folded JSON array: 10 items, keys=[id, name]');
+  });
 });
