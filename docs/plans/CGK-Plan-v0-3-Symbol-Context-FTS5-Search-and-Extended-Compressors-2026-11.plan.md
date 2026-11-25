@@ -1,7 +1,7 @@
 ---
 title: Plan - Feature: v0.3 Symbol Context FTS5 Search and Extended Compressors
 ticket: local://CGK:CGK-Plan-v0-3-Symbol-Context-FTS5-Search-and-Extended-Compressors-2026-11
-status: in-progress
+status: shipped
 priority: 
 state: 
 due: 
@@ -19,6 +19,7 @@ reviewVerdict: pass
 reviewSession: fa844319-c0d3-48d7-8162-bc0030117da3
 baseBranch: main
 reviewFingerprint: 638fc22c4721dc81a3a40c0d424cc26d8fe2987e7a3c1116fbb93c5acb003baf
+pr: https://github.com/AaronPG095/Context-Gatekeeper-MCP/pull/6
 ---
 # v0.3 Symbol Context FTS5 Search and Extended Compressors
 
