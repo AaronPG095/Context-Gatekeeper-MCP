@@ -4,6 +4,7 @@ export interface RepoMapInput {
   path?: string;
   depth?: number;
   limit?: number;
+  query?: string;
   maxSymbolsPerFile?: number;
 }
 
@@ -15,17 +16,42 @@ export interface RepoMapResult {
 
 /**
  * Returns a compact structural overview of indexed files and top-level
- * exported symbols (with line counts), ranking by cross-file inbound
- * references when truncating to `limit`.
+ * exported symbols (with line counts), or searches symbols via FTS5 when
+ * `query` is provided.
  */
 export function repoMap(
   store: SymbolStore,
   input: RepoMapInput = {},
 ): RepoMapResult {
+  const limit = input.limit ?? 50;
+
+  if (input.query && input.query.trim().length > 0) {
+    const prefix = input.path ? normalizeRelPath(input.path) : '';
+    const hits = store.searchSymbols(input.query, limit).filter((h) => {
+      if (!prefix) return true;
+      return h.rel_path === prefix || h.rel_path.startsWith(`${prefix}/`);
+    });
+    if (hits.length === 0) {
+      return {
+        files_count: 0,
+        omitted_count: 0,
+        content: `(no symbols matched "${input.query.trim()}")`,
+      };
+    }
+    const uniqueFiles = new Set(hits.map((h) => h.rel_path)).size;
+    const lines = hits.map(
+      (h) => `${h.rel_path}:L${h.start_line} [${h.kind}] ${h.qualified_name} — ${h.signature}`,
+    );
+    return {
+      files_count: uniqueFiles,
+      omitted_count: 0,
+      content: lines.join('\n'),
+    };
+  }
+
   const prefix = input.path ? normalizeRelPath(input.path) : '';
   const maxDepth = input.depth;
   const maxSyms = input.maxSymbolsPerFile ?? 8;
-  const limit = input.limit ?? 50;
 
   const filtered = store.getRepoMapEntries(prefix || undefined).filter((entry) => {
     if (maxDepth === undefined) return true;

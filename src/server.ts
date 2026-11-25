@@ -101,7 +101,7 @@ export function createGatekeeperServer(
 
   const server = new McpServer({
     name: 'context-gatekeeper-mcp',
-    version: '0.2.0',
+    version: '0.3.0',
   });
 
   server.registerTool(
@@ -112,13 +112,15 @@ export function createGatekeeperServer(
         command: z.string(),
         cwd: z.string().optional(),
         timeout_ms: z.number().int().positive().optional(),
+        delta: z.boolean().optional(),
       },
     },
-    async ({ command, cwd, timeout_ms }) => {
+    async ({ command, cwd, timeout_ms, delta }) => {
       const res = await runCompact(artifactStore, {
         command,
         cwd: cwd ?? defaultRoot,
         timeoutMs: timeout_ms,
+        delta,
       });
       return {
         content: [
@@ -163,18 +165,19 @@ export function createGatekeeperServer(
   server.registerTool(
     'repo_map',
     {
-      description: 'Compact map of indexed files and exported symbols (ranked by refs).',
+      description: 'Compact map of indexed files/symbols or FTS5 symbol search via query.',
       inputSchema: {
         path: z.string().optional(),
         depth: z.number().int().min(0).optional(),
         limit: z.number().int().positive().optional(),
+        query: z.string().optional(),
         root: z.string().optional(),
       },
     },
-    async ({ path, depth, limit, root }) => {
+    async ({ path, depth, limit, query, root }) => {
       const ws = getWorkspace(root);
       await ws.ensureIndexed();
-      const res = repoMap(ws.symbolStore, { path, depth, limit });
+      const res = repoMap(ws.symbolStore, { path, depth, limit, query });
       return { content: [{ type: 'text', text: res.content }] };
     },
   );
@@ -204,10 +207,11 @@ export function createGatekeeperServer(
         file: z.string(),
         symbol: z.string().optional(),
         symbols: z.array(z.string()).min(1).optional(),
+        include_deps: z.boolean().optional(),
         root: z.string().optional(),
       },
     },
-    async ({ file, symbol, symbols, root }) => {
+    async ({ file, symbol, symbols, include_deps, root }) => {
       const targets = symbols?.length ? symbols : symbol ? [symbol] : [];
       if (targets.length === 0) {
         throw new Error('Provide "symbol" or "symbols".');
@@ -218,6 +222,7 @@ export function createGatekeeperServer(
         rootDir: ws.rootDir,
         file,
         symbols: targets,
+        includeDeps: include_deps,
       });
       return {
         content: [{ type: 'text', text: `${res.file}:\n${res.content}` }],

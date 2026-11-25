@@ -22,6 +22,7 @@ export {
   type SymbolRecord,
   type SymbolRefInput,
   type SymbolRefRecord,
+  type SymbolSearchHit,
   type UpsertFileIndexInput,
 } from './store/symbols.js';
 export {
