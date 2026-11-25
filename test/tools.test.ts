@@ -44,4 +44,20 @@ describe('runCompact + fetchChunk integration', () => {
     expect(byRange.returned_lines).toBe(3);
     expect(byRange.content).toContain('L1: ok line 1');
   });
+
+  it('returns delta-only summary on repeat runCompact calls for the same command and cwd', async () => {
+    const db = openDatabase(':memory:');
+    dbs.push(db);
+    const store = new ArtifactStore(db);
+
+    const cmd = 'node -e "console.log(\'error TS100: failA\'); console.log(\'ok line\')"';
+    const first = await runCompact(store, { command: cmd });
+    expect(first.is_delta).toBeUndefined();
+    expect(first.summary).toContain('error TS100: failA');
+
+    const second = await runCompact(store, { command: cmd });
+    expect(second.is_delta).toBe(true);
+    expect(second.prev_artifact_id).toBe(first.artifact_id);
+    expect(second.summary).toContain(`[delta vs ${first.artifact_id}] No change`);
+  });
 });

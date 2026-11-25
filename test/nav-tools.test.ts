@@ -6,7 +6,7 @@ import { indexWorkspace } from '../src/ast/indexer.js';
 import { openDatabase } from '../src/store/db.js';
 import { SymbolStore } from '../src/store/symbols.js';
 import { findReferences } from '../src/tools/find-references.js';
-import { readSymbol } from '../src/tools/read-symbol.js';
+import { readSymbol, readSymbols } from '../src/tools/read-symbol.js';
 import { repoMap } from '../src/tools/repo-map.js';
 import { symbolOutline } from '../src/tools/symbol-outline.js';
 
@@ -109,5 +109,20 @@ describe('Navigation tools (repoMap, symbolOutline, readSymbol, findReferences)'
     const refs = findReferences(store, { symbol: 'TokenCounter' });
     expect(refs.count).toBeGreaterThanOrEqual(1);
     expect(refs.content).toContain('src/nested/caller.ts:L3');
+
+    const batched = readSymbols(store, {
+      rootDir: dir,
+      file: 'src/token.ts',
+      symbols: ['TokenStats', 'TokenCounter.count'],
+    });
+    expect(batched.items).toHaveLength(2);
+    expect(batched.content).toContain('interface TokenStats');
+    expect(batched.content).toContain('return text.length;');
+
+    const ranked = repoMap(store, { limit: 1 });
+    expect(ranked.files_count).toBe(1);
+    expect(ranked.omitted_count).toBe(2);
+    expect(ranked.content).toContain('src/token.ts');
+    expect(ranked.content).toContain('+2 more files');
   });
 });

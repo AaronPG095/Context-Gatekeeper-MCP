@@ -5,7 +5,7 @@
 ```mermaid
 flowchart LR
     Agent["Coding Agent\n(Claude Code / Codex / Antigravity / Cursor)"]
-    Agent <-->|"MCP stdio (6 tools, 546 tokens)"| Server["src/server.ts\nMcpServer"]
+    Agent <-->|"MCP stdio (6 tools, 573 tokens)"| Server["src/server.ts\nMcpServer"]
 
     Server -->|"run_compact / fetch_chunk"| Runner["src/compress/\nPowerShell/POSIX + Rules"]
     Runner -->|"Raw lines + FTS5"| DB[(".context-gatekeeper/index.db\nnode:sqlite WAL + FTS5")]
@@ -19,7 +19,7 @@ flowchart LR
 ## Zero-Native Windows Design
 
 - **SQLite FTS5 (`node:sqlite`):** Uses Node 22+'s built-in `DatabaseSync` in `WAL` mode (`synchronous = NORMAL`, `foreign_keys = ON`, `busy_timeout = 5000`). No `node-gyp` or Visual Studio C++ Build Tools required.
-- **Tree-sitter (`web-tree-sitter@0.24.7` + `tree-sitter-wasms@0.1.13`):** Loads prebuilt `.wasm` grammars (`typescript`, `tsx`, `javascript`, `c_sharp`) on demand. Syntax `Tree` and `Parser` WASM allocations are explicitly `.delete()`d in `finally` blocks.
+- **Tree-sitter (`web-tree-sitter@0.24.7` + `tree-sitter-wasms@0.1.13`):** Loads prebuilt `.wasm` grammars (`typescript`, `tsx`, `javascript`, `c_sharp`, `python`) on demand, plus fenced-block-aware Markdown heading section indexing. Syntax `Tree` and `Parser` WASM allocations are explicitly `.delete()`d in `finally` blocks.
 - **PowerShell-safe Execution:** On Windows, `run_compact` executes commands via `powershell.exe -NoProfile -NonInteractive -Command` with `windowsHide: true`, line-buffered ANSI/CR stripping, and `taskkill /T /F` timeout cleanup.
 
 ---
@@ -45,7 +45,7 @@ Incremental indexing skips unchanged files in `O(1)` stat time via `mtime_ms`, f
 ## Measured Benchmarks (`gpt-tokenizer` `o200k_base`)
 
 ### Tool-Schema Overhead
-- Total `tools/list` JSON schema payload across all 6 tools: **546 `o200k_base` tokens**.
+- Total `tools/list` JSON schema payload across all 6 tools: **573 `o200k_base` tokens**.
 
 ### Output Compression (`npm run bench`)
 | Scenario | Raw Tokens | Compressed Tokens | Reduction | Diagnostics |
