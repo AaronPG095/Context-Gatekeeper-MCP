@@ -32,7 +32,7 @@ None
 ## Acceptance criteria
 
 - [ ] AC1: `run_compact` computes a compact delta summary on repeat `(command, cwd)` runs (`[delta vs <prev_id>]` showing resolved/new/unchanged lines) while persisting full raw output and `summary_text` in SQLite (with safe `ALTER TABLE` migration for existing DBs).
-- [ ] AC2: `read_symbol` supports batched reads (`symbols: string[]` in addition to `symbol: string`) in a single file read and single MCP tool turn.
+- [x] AC2: `read_symbol` supports batched reads (`symbols: string[]` in addition to `symbol: string`) in a single file read and single MCP tool turn. verified: inbound_refs ranking + limit in repo_map, readSymbols batching in read_symbol and server.ts
 - [ ] AC3: `repo_map` ranks files by cross-file inbound reference count (`inbound_refs`) when truncating to `limit` (default 50) and reports omitted file count.
 - [ ] AC4: AST indexer supports **Python** (`.py` via `tree-sitter-python.wasm`) and **Markdown** (`.md` heading sections with exact `start_line..end_line`), tested end-to-end with `symbol_outline`, `read_symbol`, and `find_references`.
 - [ ] AC5: Version bumped to `0.2.0`, `tools/list` schema `< 900` `o200k_base` tokens, `README.md` / `docs/ARCHITECTURE.md` updated, `npm run typecheck`, `npm run build`, `npm test`, and `npm run bench` all pass on Windows/PowerShell, with regular per-step commits, independent review, merged PR, and GitHub release `v0.2.0`.

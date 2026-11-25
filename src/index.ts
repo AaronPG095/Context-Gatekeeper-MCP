@@ -73,8 +73,11 @@ export {
 } from './tools/symbol-outline.js';
 export {
   readSymbol,
+  readSymbols,
   type ReadSymbolInput,
   type ReadSymbolResult,
+  type ReadSymbolsInput,
+  type ReadSymbolsResult,
 } from './tools/read-symbol.js';
 export {
   findReferences,

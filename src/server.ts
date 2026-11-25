@@ -8,7 +8,7 @@ import { getDefaultDbPath, openDatabase } from './store/db.js';
 import { SymbolStore } from './store/symbols.js';
 import { fetchChunk } from './tools/fetch-chunk.js';
 import { findReferences } from './tools/find-references.js';
-import { readSymbol } from './tools/read-symbol.js';
+import { readSymbols } from './tools/read-symbol.js';
 import { repoMap } from './tools/repo-map.js';
 import { runCompact } from './tools/run-compact.js';
 import { symbolOutline } from './tools/symbol-outline.js';
@@ -101,7 +101,7 @@ export function createGatekeeperServer(
 
   const server = new McpServer({
     name: 'context-gatekeeper-mcp',
-    version: '0.1.0',
+    version: '0.2.0',
   });
 
   server.registerTool(
@@ -163,17 +163,18 @@ export function createGatekeeperServer(
   server.registerTool(
     'repo_map',
     {
-      description: 'Compact map of indexed files and exported symbols.',
+      description: 'Compact map of indexed files and exported symbols (ranked by refs).',
       inputSchema: {
         path: z.string().optional(),
         depth: z.number().int().min(0).optional(),
+        limit: z.number().int().positive().optional(),
         root: z.string().optional(),
       },
     },
-    async ({ path, depth, root }) => {
+    async ({ path, depth, limit, root }) => {
       const ws = getWorkspace(root);
       await ws.ensureIndexed();
-      const res = repoMap(ws.symbolStore, { path, depth });
+      const res = repoMap(ws.symbolStore, { path, depth, limit });
       return { content: [{ type: 'text', text: res.content }] };
     },
   );
@@ -198,24 +199,28 @@ export function createGatekeeperServer(
   server.registerTool(
     'read_symbol',
     {
-      description: 'Read exact source body of one symbol (Name or Parent.Name).',
+      description: 'Read exact body of one or more symbols (Name or Parent.Name).',
       inputSchema: {
         file: z.string(),
-        symbol: z.string(),
+        symbol: z.string().optional(),
+        symbols: z.array(z.string()).min(1).optional(),
         root: z.string().optional(),
       },
     },
-    async ({ file, symbol, root }) => {
+    async ({ file, symbol, symbols, root }) => {
+      const targets = symbols?.length ? symbols : symbol ? [symbol] : [];
+      if (targets.length === 0) {
+        throw new Error('Provide "symbol" or "symbols".');
+      }
       const ws = getWorkspace(root);
       await ws.ensureIndexed();
-      const res = readSymbol(ws.symbolStore, { rootDir: ws.rootDir, file, symbol });
+      const res = readSymbols(ws.symbolStore, {
+        rootDir: ws.rootDir,
+        file,
+        symbols: targets,
+      });
       return {
-        content: [
-          {
-            type: 'text',
-            text: `${res.file} (${res.symbol} L${res.start_line}-L${res.end_line}):\n${res.content}`,
-          },
-        ],
+        content: [{ type: 'text', text: `${res.file}:\n${res.content}` }],
       };
     },
   );
