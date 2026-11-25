@@ -151,12 +151,11 @@ export function openDatabase(dbPath: string = getDefaultDbPath()): DatabaseSync 
   }
   const symCount = (db.prepare('SELECT COUNT(*) AS cnt FROM symbols').get() as { cnt: number }).cnt;
   if (symCount > 0) {
-    const ftsCount = (db.prepare('SELECT COUNT(*) AS cnt FROM symbols_fts').get() as { cnt: number })
-      .cnt;
-    if (ftsCount === 0) {
-      db.exec(
-        "INSERT INTO symbols_fts(rowid, name, qualified_name, signature) SELECT id, name, qualified_name, signature FROM symbols;",
-      );
+    const ftsDocCount = (
+      db.prepare('SELECT COUNT(*) AS cnt FROM symbols_fts_docsize').get() as { cnt: number }
+    ).cnt;
+    if (ftsDocCount === 0) {
+      db.exec("INSERT INTO symbols_fts(symbols_fts) VALUES('rebuild');");
     }
   }
   return db;

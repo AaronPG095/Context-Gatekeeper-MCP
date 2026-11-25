@@ -1,6 +1,6 @@
 {
   "name": "context-gatekeeper-mcp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Local-first MCP server & CLI proxy that compresses verbose tool outputs into SQLite FTS5 and provides AST symbol navigation.",
   "type": "module",
   "engines": {

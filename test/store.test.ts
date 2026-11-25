@@ -122,7 +122,6 @@ describe('ArtifactStore (node:sqlite FTS5)', () => {
       legacy.close();
 
       const migrated = openDatabase(dbPath);
-      dbs.push(migrated);
       const store = new ArtifactStore(migrated);
       const rec = store.saveArtifact({
         command: 'echo ok',
@@ -133,6 +132,24 @@ describe('ArtifactStore (node:sqlite FTS5)', () => {
         lines: [{ stream: 'stdout', text: 'ok' }],
       });
       expect(rec.summary_text).toBe('ok');
+
+      // Also verify symbols_fts rebuilds cleanly on pre-v0.3 DBs with existing symbols.
+      migrated.exec(
+        "INSERT INTO files (rel_path, lang, sha256, mtime_ms, line_count, indexed_at) VALUES ('a.ts', 'typescript', 'x', 1, 10, 1);",
+      );
+      migrated.exec(
+        "INSERT INTO symbols (file_id, name, qualified_name, kind, signature, is_exported, start_line, end_line) VALUES (1, 'LegacyFn', 'LegacyFn', 'function', 'function LegacyFn()', 1, 1, 2);",
+      );
+      migrated.exec('DROP TRIGGER symbols_ai; DROP TRIGGER symbols_ad; DROP TABLE symbols_fts;');
+      migrated.close();
+
+      const rebuilt = openDatabase(dbPath);
+      dbs.push(rebuilt);
+      const hits = rebuilt
+        .prepare("SELECT rowid FROM symbols_fts WHERE symbols_fts MATCH '\"LegacyFn\"'")
+        .all();
+      expect(hits).toHaveLength(1);
+      rebuilt.exec('DELETE FROM files WHERE id = 1;');
     } finally {
       while (dbs.length > 0) dbs.pop()?.close();
       rmSync(dir, { recursive: true, force: true });
