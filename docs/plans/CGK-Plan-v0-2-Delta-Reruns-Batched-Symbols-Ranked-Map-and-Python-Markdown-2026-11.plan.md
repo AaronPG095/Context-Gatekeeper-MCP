@@ -1,7 +1,7 @@
 ---
 title: Plan - Feature: v0.2 Delta Reruns Batched Symbols Ranked Map and Python Markdown
 ticket: local://CGK:CGK-Plan-v0-2-Delta-Reruns-Batched-Symbols-Ranked-Map-and-Python-Markdown-2026-11
-status: in-progress
+status: shipped
 priority: 
 state: 
 due: 
@@ -19,6 +19,7 @@ reviewVerdict: pass
 reviewSession: b0bf7ef9-7341-44a9-bc65-99454795e61d
 baseBranch: main
 reviewFingerprint: b5a1cfae9fa958e2f95a42e06faadd9f8906f999d846a840502600a1a9879edd
+pr: https://github.com/AaronPG095/Context-Gatekeeper-MCP/pull/5
 ---
 # v0.2 Delta Reruns Batched Symbols Ranked Map and Python Markdown
 
