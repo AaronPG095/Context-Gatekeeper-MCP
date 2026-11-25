@@ -2,7 +2,13 @@ import { createRequire } from 'node:module';
 import { extname } from 'node:path';
 import Parser from 'web-tree-sitter';
 
-export type SupportedLang = 'typescript' | 'tsx' | 'javascript' | 'csharp';
+export type SupportedLang =
+  | 'typescript'
+  | 'tsx'
+  | 'javascript'
+  | 'csharp'
+  | 'python'
+  | 'markdown';
 
 const EXT_TO_LANG: Record<string, SupportedLang> = {
   '.ts': 'typescript',
@@ -14,13 +20,16 @@ const EXT_TO_LANG: Record<string, SupportedLang> = {
   '.cjs': 'javascript',
   '.jsx': 'javascript',
   '.cs': 'csharp',
+  '.py': 'python',
+  '.md': 'markdown',
 };
 
-const LANG_TO_WASM: Record<SupportedLang, string> = {
+const LANG_TO_WASM: Partial<Record<SupportedLang, string>> = {
   typescript: 'tree-sitter-wasms/out/tree-sitter-typescript.wasm',
   tsx: 'tree-sitter-wasms/out/tree-sitter-tsx.wasm',
   javascript: 'tree-sitter-wasms/out/tree-sitter-javascript.wasm',
   csharp: 'tree-sitter-wasms/out/tree-sitter-c_sharp.wasm',
+  python: 'tree-sitter-wasms/out/tree-sitter-python.wasm',
 };
 
 const require = createRequire(import.meta.url);
@@ -48,10 +57,14 @@ export function initTreeSitter(): Promise<void> {
  * Returns a configured `Parser` instance for `lang`, caching loaded WASM grammars.
  */
 export async function getParserForLang(lang: SupportedLang): Promise<Parser> {
+  const wasmRel = LANG_TO_WASM[lang];
+  if (!wasmRel) {
+    throw new Error(`No Tree-sitter WASM grammar configured for "${lang}"`);
+  }
   await initTreeSitter();
   let langPromise = languageCache.get(lang);
   if (!langPromise) {
-    const wasmPath = require.resolve(LANG_TO_WASM[lang]);
+    const wasmPath = require.resolve(wasmRel);
     langPromise = Parser.Language.load(wasmPath);
     languageCache.set(lang, langPromise);
   }

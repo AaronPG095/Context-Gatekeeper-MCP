@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { normalizeRelPath, type SymbolStore } from '../store/symbols.js';
-import { extractFileAst } from './extract.js';
+import { extractFileAst, extractMarkdown } from './extract.js';
 import { detectLanguage, getParserForLang, type SupportedLang } from './parser.js';
 import type Parser from 'web-tree-sitter';
 
@@ -128,8 +128,10 @@ export async function indexWorkspace(
         continue;
       }
 
-      const parser = await getCachedParser(lang);
-      const extracted = extractFileAst(lang, source, parser);
+      const extracted =
+        lang === 'markdown'
+          ? extractMarkdown(source)
+          : extractFileAst(lang, source, await getCachedParser(lang));
 
       store.upsertFileIndex({
         relPath,
