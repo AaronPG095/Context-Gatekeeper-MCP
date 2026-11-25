@@ -43,7 +43,7 @@ describe('MCP stdio server & CLI proxy E2E', () => {
     const dbPath = join(dir, '.context-gatekeeper', 'index.db');
     const transport = new StdioClientTransport({
       command: process.execPath,
-      args: [CLI_PATH, '--root', dir, '--db', dbPath],
+      args: ['--no-warnings', CLI_PATH, '--root', dir, '--db', dbPath],
       env: process.env as Record<string, string>,
       stderr: 'pipe',
     });

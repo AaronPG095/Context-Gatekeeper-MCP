@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import './suppress-warnings.js';
 import { resolve } from 'node:path';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createGatekeeperServer } from './server.js';
@@ -6,15 +7,6 @@ import { ArtifactStore } from './store/artifacts.js';
 import { getDefaultDbPath, openDatabase } from './store/db.js';
 import { fetchChunk } from './tools/fetch-chunk.js';
 import { runCompact } from './tools/run-compact.js';
-
-function suppressSqliteExperimentalWarning(): void {
-  const originalEmitWarning = process.emitWarning.bind(process);
-  process.emitWarning = ((warning: string | Error, ...args: unknown[]) => {
-    const msg = typeof warning === 'string' ? warning : warning.message;
-    if (msg.includes('SQLite is an experimental feature')) return;
-    return originalEmitWarning(warning, ...(args as [string?]));
-  }) as typeof process.emitWarning;
-}
 
 function parseGlobalFlags(argv: string[]): {
   rootDir: string;
@@ -109,7 +101,6 @@ async function runCliProxy(
 }
 
 async function main(): Promise<void> {
-  suppressSqliteExperimentalWarning();
   const { rootDir, dbPath, rest } = parseGlobalFlags(process.argv.slice(2));
   const sub = rest[0];
 
