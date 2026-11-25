@@ -2,11 +2,6 @@
 import './suppress-warnings.js';
 import { resolve } from 'node:path';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { createGatekeeperServer } from './server.js';
-import { ArtifactStore } from './store/artifacts.js';
-import { getDefaultDbPath, openDatabase } from './store/db.js';
-import { fetchChunk } from './tools/fetch-chunk.js';
-import { runCompact } from './tools/run-compact.js';
 
 function parseGlobalFlags(argv: string[]): {
   rootDir: string;
@@ -47,6 +42,14 @@ async function runCliProxy(
   rootDir: string,
   dbPath?: string,
 ): Promise<void> {
+  const [{ ArtifactStore }, { getDefaultDbPath, openDatabase }, { fetchChunk }, { runCompact }] =
+    await Promise.all([
+      import('./store/artifacts.js'),
+      import('./store/db.js'),
+      import('./tools/fetch-chunk.js'),
+      import('./tools/run-compact.js'),
+    ]);
+
   const resolvedDb = dbPath ?? getDefaultDbPath(rootDir);
   const db = openDatabase(resolvedDb);
   const store = new ArtifactStore(db);
@@ -120,6 +123,7 @@ async function main(): Promise<void> {
     return;
   }
 
+  const { createGatekeeperServer } = await import('./server.js');
   const instance = createGatekeeperServer({ rootDir, dbPath });
   const transport = new StdioServerTransport();
   const shutdown = () => {
