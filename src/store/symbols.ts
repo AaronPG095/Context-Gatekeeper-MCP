@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import { buildSafeFtsQuery } from './artifacts.js';
 
 export interface FileRecord {
   id: number;
@@ -57,6 +58,15 @@ export interface UpsertFileIndexInput {
   lineCount: number;
   symbols: SymbolInput[];
   refs: SymbolRefInput[];
+}
+
+export interface SymbolSearchHit {
+  rel_path: string;
+  qualified_name: string;
+  kind: string;
+  signature: string;
+  start_line: number;
+  end_line: number;
 }
 
 export interface RepoMapFileEntry {
@@ -306,5 +316,64 @@ export class SymbolStore {
          LIMIT ?`,
       )
       .all(symbolName, Math.max(1, limit)) as unknown as SymbolRefRecord[];
+  }
+
+  searchSymbols(query: string, limit = 30): SymbolSearchHit[] {
+    const trimmed = query.trim();
+    if (!trimmed) return [];
+    const max = Math.max(1, limit);
+    const ftsQuery = buildSafeFtsQuery(trimmed);
+
+    if (ftsQuery) {
+      try {
+        const rows = this.db
+          .prepare(
+            `SELECT f.rel_path, s.qualified_name, s.kind, s.signature, s.start_line, s.end_line
+             FROM symbols_fts fts
+             JOIN symbols s ON s.id = fts.rowid
+             JOIN files f ON f.id = s.file_id
+             WHERE symbols_fts MATCH ?
+             ORDER BY s.is_exported DESC, f.rel_path ASC, s.start_line ASC
+             LIMIT ?`,
+          )
+          .all(ftsQuery, max) as unknown as SymbolSearchHit[];
+        if (rows.length > 0) return rows;
+      } catch {
+        // Fall back to LIKE below.
+      }
+    }
+
+    const escaped = trimmed.replace(/[\\%_]/g, (m) => `\\${m}`);
+    return this.db
+      .prepare(
+        `SELECT f.rel_path, s.qualified_name, s.kind, s.signature, s.start_line, s.end_line
+         FROM symbols s
+         JOIN files f ON f.id = s.file_id
+         WHERE s.qualified_name LIKE ? ESCAPE '\\' OR s.signature LIKE ? ESCAPE '\\'
+         ORDER BY s.is_exported DESC, f.rel_path ASC, s.start_line ASC
+         LIMIT ?`,
+      )
+      .all(`%${escaped}%`, `%${escaped}%`, max) as unknown as SymbolSearchHit[];
+  }
+
+  getOneHopDependencies(
+    relPath: string,
+    startLine: number,
+    endLine: number,
+    limit = 15,
+  ): SymbolSearchHit[] {
+    const norm = normalizeRelPath(relPath);
+    return this.db
+      .prepare(
+        `SELECT DISTINCT f2.rel_path, s.qualified_name, s.kind, s.signature, s.start_line, s.end_line
+         FROM symbol_refs r
+         JOIN files f1 ON f1.id = r.file_id
+         JOIN symbols s ON s.name = r.symbol_name
+         JOIN files f2 ON f2.id = s.file_id
+         WHERE f1.rel_path = ? AND r.line_no BETWEEN ? AND ?
+         ORDER BY s.is_exported DESC, (f2.rel_path = f1.rel_path) DESC, f2.rel_path ASC, s.start_line ASC
+         LIMIT ?`,
+      )
+      .all(norm, startLine, endLine, Math.max(1, limit)) as unknown as SymbolSearchHit[];
   }
 }

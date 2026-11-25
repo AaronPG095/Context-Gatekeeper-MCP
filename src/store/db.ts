@@ -104,6 +104,25 @@ CREATE TABLE IF NOT EXISTS symbol_refs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_symbol_refs_name ON symbol_refs(symbol_name);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS symbols_fts USING fts5(
+  name,
+  qualified_name,
+  signature,
+  content='symbols',
+  content_rowid='id',
+  tokenize='unicode61 tokenchars ''_.-/'''
+);
+
+CREATE TRIGGER IF NOT EXISTS symbols_ai AFTER INSERT ON symbols BEGIN
+  INSERT INTO symbols_fts(rowid, name, qualified_name, signature)
+  VALUES (new.id, new.name, new.qualified_name, new.signature);
+END;
+
+CREATE TRIGGER IF NOT EXISTS symbols_ad AFTER DELETE ON symbols BEGIN
+  INSERT INTO symbols_fts(symbols_fts, rowid, name, qualified_name, signature)
+  VALUES ('delete', old.id, old.name, old.qualified_name, old.signature);
+END;
 `;
 
 /**
@@ -129,6 +148,16 @@ export function openDatabase(dbPath: string = getDefaultDbPath()): DatabaseSync 
   }>;
   if (!artifactCols.some((c) => c.name === 'summary_text')) {
     db.exec("ALTER TABLE artifacts ADD COLUMN summary_text TEXT NOT NULL DEFAULT '';");
+  }
+  const symCount = (db.prepare('SELECT COUNT(*) AS cnt FROM symbols').get() as { cnt: number }).cnt;
+  if (symCount > 0) {
+    const ftsCount = (db.prepare('SELECT COUNT(*) AS cnt FROM symbols_fts').get() as { cnt: number })
+      .cnt;
+    if (ftsCount === 0) {
+      db.exec(
+        "INSERT INTO symbols_fts(rowid, name, qualified_name, signature) SELECT id, name, qualified_name, signature FROM symbols;",
+      );
+    }
   }
   return db;
 }

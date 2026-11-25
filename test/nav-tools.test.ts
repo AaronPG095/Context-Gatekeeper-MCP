@@ -124,5 +124,19 @@ describe('Navigation tools (repoMap, symbolOutline, readSymbol, findReferences)'
     expect(ranked.omitted_count).toBe(2);
     expect(ranked.content).toContain('src/token.ts');
     expect(ranked.content).toContain('+2 more files');
+
+    const ftsHits = repoMap(store, { query: 'ComputeHash' });
+    expect(ftsHits.content).toContain('src/Gatekeeper.cs:L3');
+    expect(ftsHits.content).toContain('IndexService.ComputeHash');
+
+    const withDeps = readSymbols(store, {
+      rootDir: dir,
+      file: 'src/nested/caller.ts',
+      symbols: ['runCount'],
+      includeDeps: true,
+    });
+    expect(withDeps.content).toContain('## Dependencies (1-hop)');
+    expect(withDeps.content).toContain('src/token.ts:L5');
+    expect(withDeps.content).toContain('export class TokenCounter');
   });
 });

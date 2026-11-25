@@ -1,11 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { normalizeRelPath, type SymbolStore } from '../store/symbols.js';
+import {
+  normalizeRelPath,
+  type SymbolSearchHit,
+  type SymbolStore,
+} from '../store/symbols.js';
 
 export interface ReadSymbolInput {
   rootDir: string;
   file: string;
   symbol: string;
+  includeDeps?: boolean;
 }
 
 export interface ReadSymbolResult {
@@ -20,11 +25,13 @@ export interface ReadSymbolsInput {
   rootDir: string;
   file: string;
   symbols: string[];
+  includeDeps?: boolean;
 }
 
 export interface ReadSymbolsResult {
   file: string;
   items: ReadSymbolResult[];
+  dependencies: SymbolSearchHit[];
   content: string;
 }
 
@@ -40,13 +47,14 @@ export function readSymbol(
     rootDir: input.rootDir,
     file: input.file,
     symbols: [input.symbol],
+    includeDeps: input.includeDeps,
   });
   return batch.items[0];
 }
 
 /**
  * Reads exact source bodies for one or more symbols in `file` with a single
- * disk read.
+ * disk read, optionally appending 1-hop callee/type signatures.
  */
 export function readSymbols(
   store: SymbolStore,
@@ -80,9 +88,30 @@ export function readSymbols(
     };
   });
 
-  const content = items
-    .map((item) => `## ${item.symbol} (L${item.start_line}-L${item.end_line})\n${item.content}`)
-    .join('\n---\n');
+  const sections = items.map(
+    (item) => `## ${item.symbol} (L${item.start_line}-L${item.end_line})\n${item.content}`,
+  );
 
-  return { file, items, content };
+  let dependencies: SymbolSearchHit[] = [];
+  if (input.includeDeps) {
+    const selfNames = new Set(found.flatMap((s) => [s.name, s.qualified_name]));
+    const depMap = new Map<string, SymbolSearchHit>();
+    for (const sym of found) {
+      const hits = store.getOneHopDependencies(file, sym.start_line, sym.end_line);
+      for (const hit of hits) {
+        if (hit.rel_path === file && selfNames.has(hit.qualified_name)) continue;
+        const key = `${hit.rel_path}:${hit.qualified_name}`;
+        if (!depMap.has(key)) depMap.set(key, hit);
+      }
+    }
+    dependencies = [...depMap.values()];
+    if (dependencies.length > 0) {
+      const depLines = dependencies.map(
+        (d) => `  ${d.rel_path}:L${d.start_line} [${d.kind}] ${d.signature}`,
+      );
+      sections.push(`## Dependencies (1-hop)\n${depLines.join('\n')}`);
+    }
+  }
+
+  return { file, items, dependencies, content: sections.join('\n---\n') };
 }

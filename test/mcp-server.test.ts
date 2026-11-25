@@ -101,6 +101,12 @@ describe('MCP stdio server & CLI proxy E2E', () => {
     const mapText = (mapRes.content as Array<{ text: string }>)[0].text;
     expect(mapText).toContain('src/greeter.ts');
 
+    const searchMap = await client.callTool({
+      name: 'repo_map',
+      arguments: { query: 'greet' },
+    });
+    expect((searchMap.content as Array<{ text: string }>)[0].text).toContain('Greeter.greet');
+
     const outlineRes = await client.callTool({
       name: 'symbol_outline',
       arguments: { file: 'src/greeter.ts' },
@@ -110,11 +116,16 @@ describe('MCP stdio server & CLI proxy E2E', () => {
 
     const readRes = await client.callTool({
       name: 'read_symbol',
-      arguments: { file: 'src/greeter.ts', symbols: ['Greeter.greet', 'runGreet'] },
+      arguments: {
+        file: 'src/greeter.ts',
+        symbols: ['Greeter.greet', 'runGreet'],
+        include_deps: true,
+      },
     });
     const readText = (readRes.content as Array<{ text: string }>)[0].text;
     expect(readText).toContain('return `Hello, ${name}!`;');
     expect(readText).toContain('return new Greeter().greet("world");');
+    expect(readText).toContain('## Dependencies (1-hop)');
 
     const refsRes = await client.callTool({
       name: 'find_references',
