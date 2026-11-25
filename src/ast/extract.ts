@@ -79,6 +79,8 @@ export function extractFileAst(
 
     if (lang === 'csharp') {
       walkCSharp(tree.rootNode, lines, undefined, symbols, addRef);
+    } else if (lang === 'python') {
+      walkPython(tree.rootNode, lines, undefined, symbols, addRef);
     } else {
       walkTypeScript(tree.rootNode, lines, undefined, false, symbols, addRef);
     }
@@ -425,4 +427,130 @@ function walkCSharpRefsOnly(
   for (const child of node.namedChildren) {
     walkCSharpRefsOnly(child, addRef);
   }
+}
+
+function walkPython(
+  node: SyntaxNode,
+  lines: string[],
+  parentQualified: string | undefined,
+  symbols: SymbolInput[],
+  addRef: (name: string | undefined, node: SyntaxNode) => void,
+): void {
+  const t = node.type;
+
+  if (t === 'class_definition') {
+    const name = getFieldText(node, 'name');
+    if (name) {
+      const qualifiedName = parentQualified ? `${parentQualified}.${name}` : name;
+      symbols.push({
+        name,
+        qualifiedName,
+        kind: 'class',
+        signature: makeSignature(node, lines),
+        isExported: !name.startsWith('_'),
+        startLine: node.startPosition.row + 1,
+        endLine: node.endPosition.row + 1,
+        parentQualifiedName: parentQualified,
+      });
+      const body = node.childForFieldName('body');
+      if (body) walkPython(body, lines, qualifiedName, symbols, addRef);
+      return;
+    }
+  }
+
+  if (t === 'function_definition') {
+    const name = getFieldText(node, 'name');
+    if (name) {
+      const qualifiedName = parentQualified ? `${parentQualified}.${name}` : name;
+      symbols.push({
+        name,
+        qualifiedName,
+        kind: parentQualified ? 'method' : 'function',
+        signature: makeSignature(node, lines),
+        isExported: !parentQualified && !name.startsWith('_'),
+        startLine: node.startPosition.row + 1,
+        endLine: node.endPosition.row + 1,
+        parentQualifiedName: parentQualified,
+      });
+      const body = node.childForFieldName('body');
+      if (body) walkPythonRefsOnly(body, addRef);
+      const params = node.childForFieldName('parameters');
+      if (params) walkPythonRefsOnly(params, addRef);
+      return;
+    }
+  }
+
+  if (t === 'call') {
+    const fn = node.childForFieldName('function');
+    if (fn) {
+      const refName =
+        fn.type === 'attribute' ? fn.childForFieldName('attribute')?.text : fn.text;
+      addRef(refName, fn);
+    }
+  }
+
+  for (const child of node.namedChildren) {
+    walkPython(child, lines, parentQualified, symbols, addRef);
+  }
+}
+
+function walkPythonRefsOnly(
+  node: SyntaxNode,
+  addRef: (name: string | undefined, node: SyntaxNode) => void,
+): void {
+  if (node.type === 'call') {
+    const fn = node.childForFieldName('function');
+    if (fn) {
+      const refName =
+        fn.type === 'attribute' ? fn.childForFieldName('attribute')?.text : fn.text;
+      addRef(refName, fn);
+    }
+  }
+  for (const child of node.namedChildren) {
+    walkPythonRefsOnly(child, addRef);
+  }
+}
+
+/**
+ * Extracts Markdown heading sections (`#`..`######`) outside fenced code blocks
+ * as navigable `section` symbols with exact `startLine..endLine` spans.
+ */
+export function extractMarkdown(source: string): ExtractedFileAst {
+  const lines = source.replace(/\r\n/g, '\n').split('\n');
+  const symbols: SymbolInput[] = [];
+  const stack: Array<{ level: number; sym: SymbolInput }> = [];
+  let inFence = false;
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const lineNo = i + 1;
+    const trimmed = lines[i].trim();
+    if (trimmed.startsWith('```') || trimmed.startsWith('~~~')) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+
+    const match = trimmed.match(/^(#{1,6})\s+(.+?)\s*#*$/);
+    if (!match) continue;
+
+    const level = match[1].length;
+    const title = match[2];
+    while (stack.length > 0 && stack[stack.length - 1].level >= level) {
+      stack.pop()!.sym.endLine = lineNo - 1;
+    }
+
+    const sym: SymbolInput = {
+      name: title,
+      qualifiedName: title,
+      kind: 'section',
+      signature: trimmed.slice(0, 160),
+      isExported: level <= 2,
+      startLine: lineNo,
+      endLine: lines.length,
+    };
+    symbols.push(sym);
+    stack.push({ level, sym });
+  }
+
+  return { symbols, refs: [], lineCount: lines.length };
 }

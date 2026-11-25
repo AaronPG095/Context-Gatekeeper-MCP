@@ -110,10 +110,11 @@ describe('MCP stdio server & CLI proxy E2E', () => {
 
     const readRes = await client.callTool({
       name: 'read_symbol',
-      arguments: { file: 'src/greeter.ts', symbol: 'Greeter.greet' },
+      arguments: { file: 'src/greeter.ts', symbols: ['Greeter.greet', 'runGreet'] },
     });
     const readText = (readRes.content as Array<{ text: string }>)[0].text;
     expect(readText).toContain('return `Hello, ${name}!`;');
+    expect(readText).toContain('return new Greeter().greet("world");');
 
     const refsRes = await client.callTool({
       name: 'find_references',

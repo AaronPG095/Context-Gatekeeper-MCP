@@ -5,6 +5,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { indexWorkspace } from '../src/ast/indexer.js';
 import { openDatabase } from '../src/store/db.js';
 import { SymbolStore } from '../src/store/symbols.js';
+import { findReferences } from '../src/tools/find-references.js';
+import { readSymbol } from '../src/tools/read-symbol.js';
+import { symbolOutline } from '../src/tools/symbol-outline.js';
 
 describe('indexWorkspace (web-tree-sitter WASM + incremental SQLite)', () => {
   const tempDirs: string[] = [];
@@ -84,5 +87,54 @@ describe('indexWorkspace (web-tree-sitter WASM + incremental SQLite)', () => {
     const fourth = await indexWorkspace(store, dir);
     expect(fourth).toEqual({ indexed: 0, skipped: 1, pruned: 1, totalFiles: 1 });
     expect(store.listFilePaths()).toEqual(['src/auth.ts']);
+  });
+
+  it('indexes Python (.py) via WASM and Markdown (.md) heading sections', async () => {
+    const { dir, store } = makeWorkspace();
+    writeFileSync(
+      join(dir, 'worker.py'),
+      [
+        'class JobRunner:',
+        '    def run_job(self, name: str) -> str:',
+        '        return name.upper()',
+        '',
+        'def main():',
+        '    r = JobRunner()',
+        '    return r.run_job("ok")',
+      ].join('\n'),
+    );
+    writeFileSync(
+      join(dir, 'GUIDE.md'),
+      [
+        '# Overview',
+        'Intro text.',
+        '```md',
+        '# Not a heading',
+        '```',
+        '## Usage',
+        'Run it here.',
+      ].join('\n'),
+    );
+
+    const stats = await indexWorkspace(store, dir);
+    expect(stats).toEqual({ indexed: 2, skipped: 0, pruned: 0, totalFiles: 2 });
+
+    const pyOutline = symbolOutline(store, { file: 'worker.py' });
+    expect(pyOutline.content).toContain('JobRunner.run_job');
+    expect(pyOutline.content).toContain('function] main');
+
+    const pyBody = readSymbol(store, { rootDir: dir, file: 'worker.py', symbol: 'JobRunner.run_job' });
+    expect(pyBody.content).toContain('return name.upper()');
+
+    const pyRefs = findReferences(store, { symbol: 'JobRunner' });
+    expect(pyRefs.content).toContain('worker.py:L6');
+
+    const mdOutline = symbolOutline(store, { file: 'GUIDE.md' });
+    expect(mdOutline.content).toContain('L1-L7 [exported section] Overview');
+    expect(mdOutline.content).toContain('L6-L7 [exported section] Usage');
+    expect(mdOutline.content).not.toContain('Not a heading');
+
+    const mdSec = readSymbol(store, { rootDir: dir, file: 'GUIDE.md', symbol: 'Usage' });
+    expect(mdSec.content).toContain('Run it here.');
   });
 });

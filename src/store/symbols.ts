@@ -63,6 +63,7 @@ export interface RepoMapFileEntry {
   rel_path: string;
   lang: string;
   line_count: number;
+  inbound_refs: number;
   symbols: Array<{
     name: string;
     kind: string;
@@ -231,6 +232,17 @@ export class SymbolStore {
       ORDER BY is_exported DESC, start_line ASC, id ASC
     `);
 
+    const inboundRows = this.db
+      .prepare(
+        `SELECT s.file_id, COUNT(*) AS cnt
+         FROM symbol_refs r
+         JOIN symbols s ON s.name = r.symbol_name AND s.is_exported = 1 AND s.parent_id IS NULL
+         WHERE r.file_id != s.file_id
+         GROUP BY s.file_id`,
+      )
+      .all() as Array<{ file_id: number; cnt: number }>;
+    const inboundMap = new Map(inboundRows.map((r) => [r.file_id, r.cnt]));
+
     return fileRows.map((f) => {
       const allTop = topSymbolsStmt.all(f.id) as RepoMapFileEntry['symbols'];
       const exported = allTop.filter((s) => s.is_exported === 1);
@@ -238,6 +250,7 @@ export class SymbolStore {
         rel_path: f.rel_path,
         lang: f.lang,
         line_count: f.line_count,
+        inbound_refs: inboundMap.get(f.id) ?? 0,
         symbols: exported.length > 0 ? exported : allTop,
       };
     });
