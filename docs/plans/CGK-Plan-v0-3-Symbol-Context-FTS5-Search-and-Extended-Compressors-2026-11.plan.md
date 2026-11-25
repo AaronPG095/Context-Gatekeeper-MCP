@@ -46,7 +46,7 @@ None
 
 - [x] Add `symbols_fts` index, `searchSymbols`, and `getOneHopDependencies` (`src/store/db.ts`, `src/store/symbols.ts`) and commit. (AC2, AC3) verified: symbols_fts DDL + backfill + searchSymbols + getOneHopDependencies implemented
 - [x] Wire `repo_map` `query?`, `read_symbol` `include_deps?`, and `run_compact` `delta?` (`src/tools/repo-map.ts`, `src/tools/read-symbol.ts`, `src/server.ts`, `src/index.ts`) and commit. (AC1, AC2, AC3) verified: repo_map query, read_symbol include_deps, and run_compact delta wired in tools and server.ts
-- [ ] Add `tsc`, `eslint`/`biome`, and `pytest` compressors plus JSON-array folding (`src/compress/rules/*`, `src/compress/registry.ts`) and commit. (AC4)
+- [x] Add `tsc`, `eslint`/`biome`, and `pytest` compressors plus JSON-array folding (`src/compress/rules/*`, `src/compress/registry.ts`) and commit. (AC4) verified: tsc, eslint, pytest rules and generic JSON-array folding implemented
 - [x] Add v0.3 tests, bump `package.json` to `0.3.0`, update `README.md` & `docs/ARCHITECTURE.md`, and commit. (AC1, AC2, AC3, AC4, AC5) verified: 19/19 tests, version 0.3.0, README.md & ARCHITECTURE.md updated
 - [x] Run full verification (`typecheck`, `build`, `test`, `bench`), tick criteria, run independent review (`pack --test` + `review`), verify `ticket.mjs check`, merge PR, and publish GitHub release `v0.3.0`. (AC5) verified: typecheck, build, test (19/19), and bench (96.7%/89.1%) passed
 
