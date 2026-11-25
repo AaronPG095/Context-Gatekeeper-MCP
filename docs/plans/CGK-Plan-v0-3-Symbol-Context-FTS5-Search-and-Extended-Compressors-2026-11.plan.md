@@ -39,7 +39,7 @@ None
 
 ## Steps
 
-- [ ] Add `symbols_fts` index, `searchSymbols`, and `getOneHopDependencies` (`src/store/db.ts`, `src/store/symbols.ts`) and commit. (AC2, AC3)
+- [x] Add `symbols_fts` index, `searchSymbols`, and `getOneHopDependencies` (`src/store/db.ts`, `src/store/symbols.ts`) and commit. (AC2, AC3) verified: symbols_fts DDL + backfill + searchSymbols + getOneHopDependencies implemented
 - [ ] Wire `repo_map` `query?`, `read_symbol` `include_deps?`, and `run_compact` `delta?` (`src/tools/repo-map.ts`, `src/tools/read-symbol.ts`, `src/server.ts`, `src/index.ts`) and commit. (AC1, AC2, AC3)
 - [ ] Add `tsc`, `eslint`/`biome`, and `pytest` compressors plus JSON-array folding (`src/compress/rules/*`, `src/compress/registry.ts`) and commit. (AC4)
 - [ ] Add v0.3 tests, bump `package.json` to `0.3.0`, update `README.md` & `docs/ARCHITECTURE.md`, and commit. (AC1, AC2, AC3, AC4, AC5)
