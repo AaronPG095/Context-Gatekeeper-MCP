@@ -34,7 +34,7 @@ None
 - [ ] AC1: `run_compact` exposes optional `delta?: boolean` in `src/server.ts`, and a legacy-DB test in `test/store.test.ts` verifies `openDatabase` migrates pre-v0.2 `artifacts` tables lacking `summary_text` via `ALTER TABLE`.
 - [ ] AC2: `read_symbol` supports optional `include_deps?: boolean` (1-hop dependency context): appends a compact `## Dependencies (1-hop)` section listing 1-line signatures (no bodies) of indexed symbols referenced inside the target symbol's line range.
 - [ ] AC3: SQLite indexes symbols in `symbols_fts` (FTS5 virtual table on `name`, `qualified_name`, `signature` with sync triggers + backfill for existing DBs), and `repo_map` accepts optional `query?: string` to jump directly to matching `file:L<start> [kind] qualified_name — signature`.
-- [ ] AC4: Compressor registry adds `tsc`, `eslint`/`biome`, and `pytest` rules plus JSON-array folding in `generic.ts`, all unit-tested with realistic verbose fixtures without dropping error diagnostics.
+- [x] AC4: Compressor registry adds `tsc`, `eslint`/`biome`, and `pytest` rules plus JSON-array folding in `generic.ts`, all unit-tested with realistic verbose fixtures without dropping error diagnostics. verified: tsc, eslint, pytest rules and generic JSON-array folding implemented
 - [ ] AC5: Version bumped to `0.3.0`, `tools/list` schema `< 900` `o200k_base` tokens, `README.md` & `docs/ARCHITECTURE.md` updated with exact measured schema token count and `summary_text`/`symbols_fts` schema, `npm run typecheck`, `npm run build`, `npm test`, and `npm run bench` pass on Windows/PowerShell, independent review `pass`, PR merged, and GitHub release `v0.3.0` published.
 
 ## Steps
