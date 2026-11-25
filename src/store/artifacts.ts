@@ -17,6 +17,7 @@ export interface ArtifactRecord {
   raw_bytes: number;
   raw_lines: number;
   summary_bytes: number;
+  summary_text: string;
   created_at: number;
 }
 
@@ -76,8 +77,8 @@ export class ArtifactStore {
     const insertArtifact = this.db.prepare(`
       INSERT INTO artifacts (
         id, command, cwd, exit_code, duration_ms,
-        raw_bytes, raw_lines, summary_bytes, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        raw_bytes, raw_lines, summary_bytes, summary_text, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const insertLine = this.db.prepare(`
       INSERT INTO artifact_lines (artifact_id, line_no, stream, text)
@@ -95,6 +96,7 @@ export class ArtifactStore {
         rawBytes,
         input.lines.length,
         summaryBytes,
+        input.summaryText,
         createdAt,
       );
 
@@ -121,8 +123,20 @@ export class ArtifactStore {
       raw_bytes: rawBytes,
       raw_lines: input.lines.length,
       summary_bytes: summaryBytes,
+      summary_text: input.summaryText,
       created_at: createdAt,
     };
+  }
+
+  getLatestArtifactForCommand(command: string, cwd: string): ArtifactRecord | undefined {
+    return this.db
+      .prepare(
+        `SELECT * FROM artifacts
+         WHERE command = ? AND cwd = ?
+         ORDER BY created_at DESC, rowid DESC
+         LIMIT 1`,
+      )
+      .get(command, cwd) as ArtifactRecord | undefined;
   }
 
   getArtifact(id: string): ArtifactRecord | undefined {

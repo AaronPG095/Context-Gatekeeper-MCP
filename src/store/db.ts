@@ -31,10 +31,12 @@ CREATE TABLE IF NOT EXISTS artifacts (
   raw_bytes INTEGER NOT NULL,
   raw_lines INTEGER NOT NULL,
   summary_bytes INTEGER NOT NULL,
+  summary_text TEXT NOT NULL DEFAULT '',
   created_at INTEGER NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_artifacts_created_at ON artifacts(created_at);
+CREATE INDEX IF NOT EXISTS idx_artifacts_cmd_cwd ON artifacts(command, cwd, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS artifact_lines (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -122,5 +124,11 @@ export function openDatabase(dbPath: string = getDefaultDbPath()): DatabaseSync 
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec('PRAGMA busy_timeout = 5000;');
   db.exec(SCHEMA_SQL);
+  const artifactCols = db.prepare('PRAGMA table_info(artifacts)').all() as Array<{
+    name: string;
+  }>;
+  if (!artifactCols.some((c) => c.name === 'summary_text')) {
+    db.exec("ALTER TABLE artifacts ADD COLUMN summary_text TEXT NOT NULL DEFAULT '';");
+  }
   return db;
 }
