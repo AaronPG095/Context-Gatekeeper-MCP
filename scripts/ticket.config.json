@@ -41,12 +41,7 @@
   "requireReview": true,
   "allowSelfReview": false,
   "invariants": {
-    "mirrorDirs": [
-      [
-        ".agents/skills",
-        ".claude/skills"
-      ]
-    ],
+    "mirrorDirs": [],
     "noSecretsPatterns": [
       "\\bntn_[A-Za-z0-9]{10,}",
       "\\bsecret_[A-Za-z0-9]{10,}",
@@ -86,5 +81,6 @@
     "noNewFilesUnder": [
       "src"
     ]
-  }
+  },
+  "mode": "universal"
 }

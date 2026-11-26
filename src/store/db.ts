@@ -7,6 +7,18 @@ import { DatabaseSync } from 'node:sqlite';
 export const DEFAULT_DB_REL_PATH = join('.context-gatekeeper', 'index.db');
 
 /**
+ * Returns the OS user-cache directory used for per-repository Context Gatekeeper
+ * SQLite databases (`%LOCALAPPDATA%\context-gatekeeper` on Windows).
+ */
+export function getCacheDir(): string {
+  const cacheBase =
+    process.platform === 'win32'
+      ? process.env.LOCALAPPDATA || join(homedir(), 'AppData', 'Local')
+      : process.env.XDG_CACHE_HOME || join(homedir(), '.cache');
+  return join(cacheBase, 'context-gatekeeper');
+}
+
+/**
  * Computes a deterministic OS user-cache SQLite path for `rootDir` so target
  * repositories never get untracked `.context-gatekeeper/` files.
  */
@@ -14,11 +26,7 @@ export function getDefaultDbPath(rootDir: string = process.cwd()): string {
   const normRoot = resolve(rootDir);
   const key = process.platform === 'win32' ? normRoot.toLowerCase() : normRoot;
   const hash = createHash('sha256').update(key).digest('hex').slice(0, 12);
-  const cacheBase =
-    process.platform === 'win32'
-      ? process.env.LOCALAPPDATA || join(homedir(), 'AppData', 'Local')
-      : process.env.XDG_CACHE_HOME || join(homedir(), '.cache');
-  return join(cacheBase, 'context-gatekeeper', `${hash}.db`);
+  return join(getCacheDir(), `${hash}.db`);
 }
 
 const SCHEMA_SQL = `
@@ -123,6 +131,24 @@ CREATE TRIGGER IF NOT EXISTS symbols_ad AFTER DELETE ON symbols BEGIN
   INSERT INTO symbols_fts(symbols_fts, rowid, name, qualified_name, signature)
   VALUES ('delete', old.id, old.name, old.qualified_name, old.signature);
 END;
+
+CREATE TABLE IF NOT EXISTS meta (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS tool_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tool TEXT NOT NULL,
+  target TEXT NOT NULL,
+  baseline_chars INTEGER NOT NULL,
+  returned_chars INTEGER NOT NULL,
+  duration_ms INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_tool_events_created_at ON tool_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_tool_events_tool_target ON tool_events(tool, target);
 `;
 
 /**

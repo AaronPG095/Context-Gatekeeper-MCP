@@ -97,7 +97,11 @@ args = ["--no-warnings", "C:/Users/Aaron/Desktop/CODING/Context-Gatekeeper-MCP/d
 
 ## Measured Token Savings (`gpt-tokenizer` `o200k_base`)
 
-Run `npm run bench` to reproduce:
+Run `npm run bench` to reproduce synthetic benchmarks, or inspect real-world usage across your repos with:
+
+```powershell
+node dist/src/cli.js stats --all --days 7
+```
 
 | Scenario | Raw Tokens | Gatekeeper Tokens | Reduction | Diagnostics |
 | :--- | ---: | ---: | ---: | :---: |

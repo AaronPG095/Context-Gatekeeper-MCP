@@ -1,3 +1,4 @@
+import { statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -6,6 +7,10 @@ import { indexWorkspace } from './ast/indexer.js';
 import { ArtifactStore } from './store/artifacts.js';
 import { getDefaultDbPath, openDatabase } from './store/db.js';
 import { SymbolStore } from './store/symbols.js';
+import {
+  type RecordToolEventInput,
+  TelemetryStore,
+} from './store/telemetry.js';
 import { fetchChunk } from './tools/fetch-chunk.js';
 import { findReferences } from './tools/find-references.js';
 import { readSymbols } from './tools/read-symbol.js';
@@ -24,6 +29,7 @@ export interface GatekeeperServerInstance {
   db: DatabaseSync;
   artifactStore: ArtifactStore;
   symbolStore: SymbolStore;
+  telemetryStore: TelemetryStore;
   close: () => void;
 }
 
@@ -31,7 +37,24 @@ interface WorkspaceContext {
   rootDir: string;
   db: DatabaseSync;
   symbolStore: SymbolStore;
+  telemetryStore: TelemetryStore;
   ensureIndexed: () => Promise<void>;
+}
+
+function safeRecord(telemetry: TelemetryStore, input: RecordToolEventInput): void {
+  try {
+    telemetry.recordEvent(input);
+  } catch {
+    // Telemetry must never break tool execution.
+  }
+}
+
+function safeFileSize(rootDir: string, relFile: string): number {
+  try {
+    return statSync(resolve(rootDir, relFile)).size;
+  } catch {
+    return 0;
+  }
 }
 
 /**
@@ -55,6 +78,12 @@ export function createGatekeeperServer(
     wsDb: DatabaseSync,
   ): WorkspaceContext => {
     const wsSymbolStore = new SymbolStore(wsDb);
+    const wsTelemetryStore = new TelemetryStore(wsDb);
+    try {
+      wsTelemetryStore.setMeta('root_dir', wsRoot);
+    } catch {
+      // Ignore metadata write failure.
+    }
     let lastIndexedAt = 0;
     let inFlightIndex: Promise<void> | null = null;
 
@@ -77,6 +106,7 @@ export function createGatekeeperServer(
       rootDir: wsRoot,
       db: wsDb,
       symbolStore: wsSymbolStore,
+      telemetryStore: wsTelemetryStore,
       ensureIndexed,
     };
   };
@@ -101,7 +131,7 @@ export function createGatekeeperServer(
 
   const server = new McpServer({
     name: 'context-gatekeeper-mcp',
-    version: '0.3.1',
+    version: '0.4.0',
   });
 
   server.registerTool(
@@ -116,19 +146,25 @@ export function createGatekeeperServer(
       },
     },
     async ({ command, cwd, timeout_ms, delta }) => {
+      const started = Date.now();
+      const targetCwd = cwd ?? defaultRoot;
       const res = await runCompact(artifactStore, {
         command,
-        cwd: cwd ?? defaultRoot,
+        cwd: targetCwd,
         timeoutMs: timeout_ms,
         delta,
       });
+      const text = `artifact_id=${res.artifact_id} exit=${res.exit_code} rule=${res.rule} lines=${res.raw_lines}->${res.summary_lines}\n${res.summary}`;
+      const rawBytes = artifactStore.getArtifact(res.artifact_id)?.raw_bytes ?? text.length;
+      safeRecord(defaultCtx.telemetryStore, {
+        tool: 'run_compact',
+        target: res.rule,
+        baselineChars: Math.max(rawBytes, text.length),
+        returnedChars: text.length,
+        durationMs: Date.now() - started,
+      });
       return {
-        content: [
-          {
-            type: 'text',
-            text: `artifact_id=${res.artifact_id} exit=${res.exit_code} rule=${res.rule} lines=${res.raw_lines}->${res.summary_lines}\n${res.summary}`,
-          },
-        ],
+        content: [{ type: 'text', text }],
       };
     },
   );
@@ -145,19 +181,24 @@ export function createGatekeeperServer(
       },
     },
     ({ artifact_id, query, line_range, context_lines }) => {
+      const started = Date.now();
       const res = fetchChunk(artifactStore, {
         artifact_id,
         query,
         line_range,
         context_lines,
       });
+      const text = `[${res.artifact_id} mode=${res.mode} lines=${res.returned_lines}/${res.total_lines}]\n${res.content}`;
+      const rawBytes = artifactStore.getArtifact(artifact_id)?.raw_bytes ?? text.length;
+      safeRecord(defaultCtx.telemetryStore, {
+        tool: 'fetch_chunk',
+        target: res.mode,
+        baselineChars: Math.max(rawBytes, text.length),
+        returnedChars: text.length,
+        durationMs: Date.now() - started,
+      });
       return {
-        content: [
-          {
-            type: 'text',
-            text: `[${res.artifact_id} mode=${res.mode} lines=${res.returned_lines}/${res.total_lines}]\n${res.content}`,
-          },
-        ],
+        content: [{ type: 'text', text }],
       };
     },
   );
@@ -175,9 +216,17 @@ export function createGatekeeperServer(
       },
     },
     async ({ path, depth, limit, query, root }) => {
+      const started = Date.now();
       const ws = getWorkspace(root);
       await ws.ensureIndexed();
       const res = repoMap(ws.symbolStore, { path, depth, limit, query });
+      safeRecord(ws.telemetryStore, {
+        tool: 'repo_map',
+        target: query ? `query:${query}` : (path ?? '.'),
+        baselineChars: res.content.length,
+        returnedChars: res.content.length,
+        durationMs: Date.now() - started,
+      });
       return { content: [{ type: 'text', text: res.content }] };
     },
   );
@@ -192,9 +241,17 @@ export function createGatekeeperServer(
       },
     },
     async ({ file, root }) => {
+      const started = Date.now();
       const ws = getWorkspace(root);
       await ws.ensureIndexed();
       const res = symbolOutline(ws.symbolStore, { file });
+      safeRecord(ws.telemetryStore, {
+        tool: 'symbol_outline',
+        target: res.file,
+        baselineChars: Math.max(safeFileSize(ws.rootDir, res.file), res.content.length),
+        returnedChars: res.content.length,
+        durationMs: Date.now() - started,
+      });
       return { content: [{ type: 'text', text: res.content }] };
     },
   );
@@ -212,6 +269,7 @@ export function createGatekeeperServer(
       },
     },
     async ({ file, symbol, symbols, include_deps, root }) => {
+      const started = Date.now();
       const targets = symbols?.length ? symbols : symbol ? [symbol] : [];
       if (targets.length === 0) {
         throw new Error('Provide "symbol" or "symbols".');
@@ -224,8 +282,16 @@ export function createGatekeeperServer(
         symbols: targets,
         includeDeps: include_deps,
       });
+      const text = `${res.file}:\n${res.content}`;
+      safeRecord(ws.telemetryStore, {
+        tool: 'read_symbol',
+        target: `${res.file}:${targets.join(',')}`,
+        baselineChars: Math.max(safeFileSize(ws.rootDir, res.file), text.length),
+        returnedChars: text.length,
+        durationMs: Date.now() - started,
+      });
       return {
-        content: [{ type: 'text', text: `${res.file}:\n${res.content}` }],
+        content: [{ type: 'text', text }],
       };
     },
   );
@@ -241,9 +307,17 @@ export function createGatekeeperServer(
       },
     },
     async ({ symbol, limit, root }) => {
+      const started = Date.now();
       const ws = getWorkspace(root);
       await ws.ensureIndexed();
       const res = findReferences(ws.symbolStore, { symbol, limit });
+      safeRecord(ws.telemetryStore, {
+        tool: 'find_references',
+        target: symbol,
+        baselineChars: res.content.length,
+        returnedChars: res.content.length,
+        durationMs: Date.now() - started,
+      });
       return { content: [{ type: 'text', text: res.content }] };
     },
   );
@@ -253,6 +327,7 @@ export function createGatekeeperServer(
     db,
     artifactStore,
     symbolStore: defaultCtx.symbolStore,
+    telemetryStore: defaultCtx.telemetryStore,
     close: () => {
       const closed = new Set<DatabaseSync>();
       for (const ctx of workspaces.values()) {

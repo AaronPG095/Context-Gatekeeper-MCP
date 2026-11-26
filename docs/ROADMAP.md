@@ -4,30 +4,23 @@ Prioritized token-efficiency improvements beyond **v0.1.1**.
 
 ---
 
-## v0.2 — High-ROI Token Multipliers
+## Shipped (`v0.2.0` – `v0.4.0`)
 
-1. **Delta-Only Re-Runs (`run_compact`)**
-   - Compare repeat `dotnet build` / `vitest` runs against the previous artifact for the same command and return only the diff (`Resolved: CS1002 | Remaining: CS0246 | New: 0`), cutting iterative debug-loop tokens by ~50–80%.
-2. **Batched Symbol Reads (`read_symbol`)**
-   - Accept an array of symbol targets (e.g., `["Auth.login", "Auth.verify"]`) in a single tool call to eliminate extra conversation round-trips.
-3. **Graph-Ranked `repo_map`**
-   - Rank files by inbound `symbol_refs` count + git recency (`git log -n 20`) instead of alphabetical order so large repos surface only the most central files within budget.
-4. **Additional Grammars & Compressors (Zero New Native Deps)**
-   - Grammars already bundled in `tree-sitter-wasms`: **Markdown** (heading outline + `read_section`), **Python**, **PowerShell**, **Go**, **Rust**.
-   - Compressors: `tsc`, `eslint` / `biome`, `pytest`, `cargo test`, `docker build`.
-5. **Pre-Tool Hook Interception (`PreToolUse`)**
-   - Route raw shell `dotnet` / `vitest` / `git diff` commands through `context-gatekeeper-mcp run` automatically in Claude Code / Antigravity hooks so verbose output never leaks into context.
+- **v0.2.0:** Delta-only re-runs (`run_compact` `delta`), batched `read_symbol` (`symbols[]`), `inbound_refs`-ranked `repo_map` (`limit`), Python & Markdown indexing.
+- **v0.3.0 / v0.3.1:** 1-hop dependency context (`include_deps`), `symbols_fts` search (`repo_map(query)`), `tsc` / `eslint` / `biome` / `pytest` compressors, JSON array folding.
+- **v0.4.0:** 100% local SQLite `tool_events` telemetry across all 6 tools + `stats [--all] [--days <n>] [--json]` CLI to measure real-world savings and surface `generic` fallbacks.
 
 ---
 
-## v0.3+ — Deeper Context-Selection Intelligence
+## Remaining / Future Candidates
 
-1. **1-Hop Dependency Context (`symbol_context`)**
-   - Return a symbol's body plus only the 1-line signatures (no bodies) of the types/functions it calls, eliminating follow-up lookup turns.
-2. **FTS5 Symbol & Docstring Search**
-   - Index symbol names, signatures, and docstrings in SQLite FTS5 so agents can jump directly from a concept (e.g. `"JWT expiry"`) to `file:symbol`.
-3. **Structured JSON / Log Folding**
-   - Collapse repetitive JSON arrays and API dumps into `{ schema, count, sample[0] }` + `artifact_id` for `fetch_chunk`.
+1. **Pre-Tool Hook Interception (`PreToolUse`)**
+   - Route raw shell `dotnet` / `vitest` / `git diff` commands through `context-gatekeeper-mcp run` automatically in client hooks so verbose output never leaks into context.
+2. **Git-Recency Ranking in `repo_map`**
+   - Blend `inbound_refs` with `git log -n 20` recency so actively edited files surface first.
+3. **Additional Grammars & Compressors (Zero New Native Deps)**
+   - Grammars already bundled in `tree-sitter-wasms`: **PowerShell**, **Go**, **Rust**.
+   - Compressors: `cargo test`, `docker build`.
 
 ---
 
