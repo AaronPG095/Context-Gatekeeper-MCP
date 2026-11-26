@@ -8,9 +8,12 @@ export const DEFAULT_DB_REL_PATH = join('.context-gatekeeper', 'index.db');
 
 /**
  * Returns the OS user-cache directory used for per-repository Context Gatekeeper
- * SQLite databases (`%LOCALAPPDATA%\context-gatekeeper` on Windows).
+ * SQLite databases (`%LOCALAPPDATA%\context-gatekeeper` on Windows), or
+ * `CGK_CACHE_DIR` when overridden (e.g., in isolated tests).
  */
 export function getCacheDir(): string {
+  const override = process.env.CGK_CACHE_DIR?.trim();
+  if (override) return resolve(override);
   const cacheBase =
     process.platform === 'win32'
       ? process.env.LOCALAPPDATA || join(homedir(), 'AppData', 'Local')

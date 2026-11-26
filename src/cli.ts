@@ -33,7 +33,7 @@ Usage:
   context-gatekeeper-mcp [--root <dir>] [--db <path>]         Start MCP stdio server
   context-gatekeeper-mcp run <command...>                     Run command & print compact summary
   context-gatekeeper-mcp fetch <artifact_id> [--query <q>] [--range <a..b>] [--context <n>]
-  context-gatekeeper-mcp stats [--all] [--days <n>] [--json]  Show local token-savings telemetry
+  context-gatekeeper-mcp stats [--all] [--days <n>] [--json] [--prune]  Show/prune local telemetry
 `);
 }
 
@@ -42,21 +42,35 @@ async function runStatsCli(
   rootDir: string,
   dbPath?: string,
 ): Promise<void> {
-  const [{ getDefaultDbPath }, { aggregateStats, formatStatsReport, listCacheDbPaths }] =
-    await Promise.all([import('./store/db.js'), import('./store/telemetry.js')]);
+  const [
+    { getDefaultDbPath },
+    { aggregateStats, formatStatsReport, listCacheDbPaths, pruneStaleCacheDbs },
+  ] = await Promise.all([import('./store/db.js'), import('./store/telemetry.js')]);
 
   let all = false;
   let json = false;
+  let prune = false;
   let days: number | undefined;
 
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
     if (arg === '--all') all = true;
     else if (arg === '--json') json = true;
+    else if (arg === '--prune') prune = true;
     else if (arg === '--days' && args[i + 1]) {
       const parsed = Number(args[++i]);
       if (Number.isFinite(parsed) && parsed > 0) days = parsed;
     }
+  }
+
+  if (prune) {
+    const res = pruneStaleCacheDbs();
+    console.log(
+      json
+        ? JSON.stringify(res, null, 2)
+        : `Pruned ${res.removed} stale cache DB(s) (${res.kept} kept).`,
+    );
+    return;
   }
 
   const sinceMs = days ? Date.now() - days * 86_400_000 : undefined;

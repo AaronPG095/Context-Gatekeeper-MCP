@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { getCacheDir, openDatabase } from './db.js';
@@ -390,22 +390,75 @@ export function aggregateStats(
   };
 }
 
+export interface PruneResult {
+  removed: number;
+  kept: number;
+}
+
+/**
+ * Removes stale/orphaned `.db` files (and `-wal`/`-shm` sidecars) from `cacheDir`
+ * when their recorded `root_dir` no longer exists on disk or when they have
+ * neither recorded `tool_events` nor `artifacts`.
+ */
+export function pruneStaleCacheDbs(cacheDir: string = getCacheDir()): PruneResult {
+  let removed = 0;
+  let kept = 0;
+
+  for (const dbPath of listCacheDbPaths(cacheDir)) {
+    let shouldRemove = false;
+    const db = openDatabase(dbPath);
+    try {
+      const store = new TelemetryStore(db);
+      const rootDir = store.getMeta('root_dir');
+      const events = (
+        db.prepare('SELECT COUNT(*) AS cnt FROM tool_events').get() as { cnt: number }
+      ).cnt;
+      const artifacts = (
+        db.prepare('SELECT COUNT(*) AS cnt FROM artifacts').get() as { cnt: number }
+      ).cnt;
+
+      if (rootDir && !existsSync(rootDir)) {
+        shouldRemove = true;
+      } else if (!rootDir && events === 0 && artifacts === 0) {
+        shouldRemove = true;
+      }
+    } finally {
+      db.close();
+    }
+
+    if (shouldRemove) {
+      rmSync(dbPath, { force: true });
+      rmSync(`${dbPath}-wal`, { force: true });
+      rmSync(`${dbPath}-shm`, { force: true });
+      removed += 1;
+    } else {
+      kept += 1;
+    }
+  }
+
+  return { removed, kept };
+}
+
 /**
  * Formats an aggregated telemetry summary into a concise plain-text CLI report.
  */
 export function formatStatsReport(summary: AggregateStatsSummary): string {
+  const activeRepos = summary.repos.filter((r) => r.calls > 0);
+  const inactiveCount = summary.repos.length - activeRepos.length;
+  const inactiveNote = inactiveCount > 0 ? `, ${inactiveCount} inactive DB(s)` : '';
+
   if (summary.calls === 0) {
-    return 'Context Gatekeeper Stats: 0 recorded tool calls yet.';
+    return `Context Gatekeeper Stats: 0 recorded tool calls yet${inactiveNote}.`;
   }
 
   const lines: string[] = [
-    `Context Gatekeeper Stats (${summary.repos.length} repo${summary.repos.length === 1 ? '' : 's'}, ${summary.calls} calls)`,
+    `Context Gatekeeper Stats (${activeRepos.length} active repo${activeRepos.length === 1 ? '' : 's'}${inactiveNote}, ${summary.calls} calls)`,
     `Overall: ~${summary.baselineTokens.toLocaleString('en-US')} -> ~${summary.returnedTokens.toLocaleString('en-US')} est. tokens (saved ~${summary.savedTokens.toLocaleString('en-US')}, ${summary.savedPct}%)`,
   ];
 
-  if (summary.repos.length > 0) {
+  if (activeRepos.length > 0) {
     lines.push('', 'Repos:');
-    for (const repo of summary.repos) {
+    for (const repo of activeRepos) {
       const label = basename(repo.rootDir) || repo.rootDir;
       lines.push(
         `  - ${label}: ${repo.calls} calls | saved ~${repo.savedTokens.toLocaleString('en-US')} (${repo.savedPct}%) | generic=${repo.genericCalls}`,

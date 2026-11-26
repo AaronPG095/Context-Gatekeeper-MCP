@@ -162,7 +162,8 @@ describe('MCP stdio server & CLI proxy E2E', () => {
   it('navigates a second repo via optional root parameter without polluting it', async () => {
     const dirA = mkdtempSync(join(tmpdir(), 'cgk-repo-a-'));
     const dirB = mkdtempSync(join(tmpdir(), 'cgk-repo-b-'));
-    tempDirs.push(dirA, dirB);
+    const cacheDir = mkdtempSync(join(tmpdir(), 'cgk-cache-'));
+    tempDirs.push(dirA, dirB, cacheDir);
 
     mkdirSync(join(dirB, 'src'), { recursive: true });
     writeFileSync(
@@ -180,7 +181,7 @@ describe('MCP stdio server & CLI proxy E2E', () => {
     const transport = new StdioClientTransport({
       command: process.execPath,
       args: [CLI_PATH, '--root', dirA],
-      env: process.env as Record<string, string>,
+      env: { ...(process.env as Record<string, string>), CGK_CACHE_DIR: cacheDir },
       stderr: 'pipe',
     });
     transports.push(transport);

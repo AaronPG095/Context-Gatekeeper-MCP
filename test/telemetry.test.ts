@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
@@ -8,11 +8,12 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { encode } from 'gpt-tokenizer/encoding/o200k_base';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createGatekeeperServer } from '../src/server.js';
-import { openDatabase } from '../src/store/db.js';
+import { getCacheDir, openDatabase } from '../src/store/db.js';
 import {
   TelemetryStore,
   aggregateStats,
   formatStatsReport,
+  pruneStaleCacheDbs,
 } from '../src/store/telemetry.js';
 
 const execFileAsync = promisify(execFile);
@@ -186,5 +187,76 @@ describe('TelemetryStore and stats aggregation', () => {
     const parsed = JSON.parse(stdout) as { calls: number; repos: Array<{ rootDir: string }> };
     expect(parsed.calls).toBe(2);
     expect(parsed.repos[0].rootDir).toBe(ws);
+  });
+
+  it('honors CGK_CACHE_DIR, hides inactive DBs in report, and prunes stale DBs', () => {
+    const cacheDir = makeTempDir('cgk-prune-cache-');
+    const realRepo = makeTempDir('cgk-real-repo-');
+    const deletedRepo = join(cacheDir, 'does-not-exist-repo');
+
+    const prevEnv = process.env.CGK_CACHE_DIR;
+    process.env.CGK_CACHE_DIR = cacheDir;
+    try {
+      expect(getCacheDir()).toBe(cacheDir);
+    } finally {
+      if (prevEnv === undefined) delete process.env.CGK_CACHE_DIR;
+      else process.env.CGK_CACHE_DIR = prevEnv;
+    }
+
+    const activeDb = join(cacheDir, 'active.db');
+    const inactiveRealDb = join(cacheDir, 'inactive-real.db');
+    const deletedRootDb = join(cacheDir, 'deleted-root.db');
+    const orphanEmptyDb = join(cacheDir, 'orphan-empty.db');
+
+    const c1 = openDatabase(activeDb);
+    try {
+      const s1 = new TelemetryStore(c1);
+      s1.setMeta('root_dir', realRepo);
+      s1.recordEvent({
+        tool: 'run_compact',
+        target: 'vitest',
+        baselineChars: 2000,
+        returnedChars: 200,
+        durationMs: 25,
+      });
+    } finally {
+      c1.close();
+    }
+
+    const c2 = openDatabase(inactiveRealDb);
+    try {
+      new TelemetryStore(c2).setMeta('root_dir', realRepo);
+    } finally {
+      c2.close();
+    }
+
+    const c3 = openDatabase(deletedRootDb);
+    try {
+      const s3 = new TelemetryStore(c3);
+      s3.setMeta('root_dir', deletedRepo);
+      s3.recordEvent({
+        tool: 'repo_map',
+        target: '.',
+        baselineChars: 100,
+        returnedChars: 100,
+        durationMs: 5,
+      });
+    } finally {
+      c3.close();
+    }
+
+    openDatabase(orphanEmptyDb).close();
+
+    const agg = aggregateStats([activeDb, inactiveRealDb]);
+    const report = formatStatsReport(agg);
+    expect(report).toContain('1 active repo, 1 inactive DB(s)');
+    expect(report).not.toContain('inactive-real.db');
+
+    const pruned = pruneStaleCacheDbs(cacheDir);
+    expect(pruned).toEqual({ removed: 2, kept: 2 });
+    expect(existsSync(activeDb)).toBe(true);
+    expect(existsSync(inactiveRealDb)).toBe(true);
+    expect(existsSync(deletedRootDb)).toBe(false);
+    expect(existsSync(orphanEmptyDb)).toBe(false);
   });
 });
