@@ -55,7 +55,7 @@ None
 
 ## Out of scope
 
-- Modifying user-global `C:\Users\Aaron\.gemini\config\mcp_config.json` (handled only after PR #3 is ready / approved).
+- Modifying user-global `~/.gemini/config/mcp_config.json` (handled only after PR #3 is ready / approved).
 
 ## Notes
 
