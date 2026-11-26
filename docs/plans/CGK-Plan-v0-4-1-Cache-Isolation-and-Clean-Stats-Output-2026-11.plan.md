@@ -1,7 +1,7 @@
 ---
 title: Plan - Bug: v0.4.1 Cache Isolation and Clean Stats Output
 ticket: local://CGK:CGK-Plan-v0-4-1-Cache-Isolation-and-Clean-Stats-Output-2026-11
-status: in-progress
+status: shipped
 priority: 
 state: 
 due: 
@@ -19,6 +19,7 @@ reviewVerdict: pass
 reviewSession: 1a940b03-eb16-4d0b-8c80-18814ec738d5
 baseBranch: main
 reviewFingerprint: 4d8d910499d919c3be7780764b8d4927e27b2e6eb74b46df4d19a0691b66ad76
+pr: https://github.com/AaronPG095/Context-Gatekeeper-MCP/pull/9
 ---
 # v0.4.1 Cache Isolation and Clean Stats Output
 
