@@ -14,6 +14,11 @@ agent: Gemini
 branch: fix/v0-4-1-cache-isolation-and-stats-cleanup
 worktree: Context-Gatekeeper-MCP
 startedAt: 2026-11-26
+reviewedBy: Gemini
+reviewVerdict: pass
+reviewSession: 1a940b03-eb16-4d0b-8c80-18814ec738d5
+baseBranch: main
+reviewFingerprint: 4d8d910499d919c3be7780764b8d4927e27b2e6eb74b46df4d19a0691b66ad76
 ---
 # v0.4.1 Cache Isolation and Clean Stats Output
 
@@ -57,3 +62,4 @@ User approved ("Yes.").
 ## Progress log
 
 <!-- One line per session/review, added with `ticket.mjs log` or `ticket.mjs review` -->
+- 2026-11-26 20:17 UTC, Gemini (review: pass): v0.4.1 isolates test cache DBs via CGK_CACHE_DIR, hides inactive DBs in stats report, and adds safe stats --prune; 23/23 tests pass. [reviewer: 1a940b03-eb16-4d0b-8c80-18814ec738d5]
