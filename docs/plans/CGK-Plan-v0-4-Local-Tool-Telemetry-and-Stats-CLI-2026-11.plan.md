@@ -33,17 +33,17 @@ None
 
 ## Acceptance criteria
 
-- [ ] AC1: `src/store/db.ts` exports `getCacheDir()` and creates/auto-migrates `meta` and `tool_events` tables with indexes on `created_at` and `(tool, target)`.
-- [ ] AC2: `src/store/telemetry.ts` exports `TelemetryStore`, `listCacheDbPaths()`, `aggregateStats()`, and `formatStatsReport()` with accurate token estimation (`Math.round(chars / 4)`), `sinceMs` filtering, `generic` fallback counting, and cross-repo aggregation.
-- [ ] AC3: All 6 MCP tool handlers in `src/server.ts` and `run`/`fetch` in `src/cli.ts` record fail-safe `tool_events` (and `meta.root_dir`) while keeping `tools/list` schema `< 900` `o200k_base` tokens and server version `0.4.0`.
-- [ ] AC4: `context-gatekeeper-mcp stats [--all] [--days <n>] [--json]` works via `src/cli.ts` with clean stderr, `test/telemetry.test.ts` passes alongside all existing tests, and `README.md` / `docs/ROADMAP.md` / `package.json` are updated for `v0.4.0`.
+- [x] AC1: `src/store/db.ts` exports `getCacheDir()` and creates/auto-migrates `meta` and `tool_events` tables with indexes on `created_at` and `(tool, target)`. verified: getCacheDir(), meta, and tool_events added to src/store/db.ts and verified by npm run typecheck + test/telemetry.test.ts
+- [x] AC2: `src/store/telemetry.ts` exports `TelemetryStore`, `listCacheDbPaths()`, `aggregateStats()`, and `formatStatsReport()` with accurate token estimation (`Math.round(chars / 4)`), `sinceMs` filtering, `generic` fallback counting, and cross-repo aggregation. verified: TelemetryStore, listCacheDbPaths, aggregateStats, formatStatsReport implemented in src/store/telemetry.ts and verified in test/telemetry.test.ts
+- [x] AC3: All 6 MCP tool handlers in `src/server.ts` and `run`/`fetch` in `src/cli.ts` record fail-safe `tool_events` (and `meta.root_dir`) while keeping `tools/list` schema `< 900` `o200k_base` tokens and server version `0.4.0`. verified: All 6 MCP tools and CLI run/fetch instrumented; test/telemetry.test.ts + test/mcp-server.test.ts pass with tools/list < 900 tokens
+- [x] AC4: `context-gatekeeper-mcp stats [--all] [--days <n>] [--json]` works via `src/cli.ts` with clean stderr, `test/telemetry.test.ts` passes alongside all existing tests, and `README.md` / `docs/ROADMAP.md` / `package.json` are updated for `v0.4.0`. verified: stats CLI verified with clean stderr in test/telemetry.test.ts; 7/7 test files (22/22 tests) passed
 
 ## Steps
 
-- [ ] Add `getCacheDir()`, `meta`, and `tool_events` schema to `src/store/db.ts`. (AC1)
-- [ ] Implement `src/store/telemetry.ts` and export it from `src/index.ts`. (AC2)
-- [ ] Instrument all 6 MCP tools in `src/server.ts` and `run`/`fetch` in `src/cli.ts`. (AC3)
-- [ ] Add `stats` CLI subcommand, update `package.json`/`README.md`/`docs/ROADMAP.md`, and add `test/telemetry.test.ts`. (AC4)
+- [x] Add `getCacheDir()`, `meta`, and `tool_events` schema to `src/store/db.ts`. (AC1) verified: Added getCacheDir() and meta/tool_events schema in src/store/db.ts
+- [x] Implement `src/store/telemetry.ts` and export it from `src/index.ts`. (AC2) verified: Implemented TelemetryStore and aggregators in src/store/telemetry.ts and exported in src/index.ts
+- [x] Instrument all 6 MCP tools in `src/server.ts` and `run`/`fetch` in `src/cli.ts`. (AC3) verified: Instrumented all 6 MCP handlers in src/server.ts and run/fetch in src/cli.ts
+- [x] Add `stats` CLI subcommand, update `package.json`/`README.md`/`docs/ROADMAP.md`, and add `test/telemetry.test.ts`. (AC4) verified: Added stats subcommand, docs, v0.4.0 version bump, and 3 telemetry tests
 - [ ] Run `typecheck`, `build`, `npm test`, `adw pack`, independent sub-agent review, and ship PR. (AC1, AC2, AC3, AC4)
 
 ## Risks

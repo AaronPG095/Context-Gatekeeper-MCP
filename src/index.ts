@@ -1,8 +1,23 @@
 export {
   openDatabase,
+  getCacheDir,
   getDefaultDbPath,
   DEFAULT_DB_REL_PATH,
 } from './store/db.js';
+export {
+  TelemetryStore,
+  aggregateStats,
+  formatStatsReport,
+  listCacheDbPaths,
+  type AggregateStatsSummary,
+  type HeavyCallRow,
+  type RecordToolEventInput,
+  type RepoStatsSummary,
+  type RuleStatsRow,
+  type StatsOptions,
+  type ToolName,
+  type ToolStatsRow,
+} from './store/telemetry.js';
 export {
   ArtifactStore,
   buildSafeFtsQuery,
