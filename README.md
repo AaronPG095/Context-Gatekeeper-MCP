@@ -39,7 +39,7 @@ node --no-warnings dist/src/cli.js fetch art_1a2b3c4d --query CS1002 --context 3
 
 ## Drop-In MCP Client Configs (Windows / PowerShell-Safe)
 
-Replace `C:/Users/Aaron/Desktop/CODING/Context-Gatekeeper-MCP` with your clone path (or use `npx -y context-gatekeeper-mcp` once published to npm).
+Replace `<path-to-context-gatekeeper-mcp>` with your clone path (or use `npx -y context-gatekeeper-mcp` once published to npm).
 
 ### Antigravity / Gemini (`~/.gemini/config/mcp_config.json`)
 ```json
@@ -49,7 +49,7 @@ Replace `C:/Users/Aaron/Desktop/CODING/Context-Gatekeeper-MCP` with your clone p
       "command": "node",
       "args": [
         "--no-warnings",
-        "C:/Users/Aaron/Desktop/CODING/Context-Gatekeeper-MCP/dist/src/cli.js"
+        "<path-to-context-gatekeeper-mcp>/dist/src/cli.js"
       ]
     }
   }
@@ -64,7 +64,7 @@ Replace `C:/Users/Aaron/Desktop/CODING/Context-Gatekeeper-MCP` with your clone p
       "command": "node",
       "args": [
         "--no-warnings",
-        "C:/Users/Aaron/Desktop/CODING/Context-Gatekeeper-MCP/dist/src/cli.js"
+        "<path-to-context-gatekeeper-mcp>/dist/src/cli.js"
       ]
     }
   }
@@ -75,7 +75,7 @@ Replace `C:/Users/Aaron/Desktop/CODING/Context-Gatekeeper-MCP` with your clone p
 ```toml
 [mcp_servers.context-gatekeeper]
 command = "node"
-args = ["--no-warnings", "C:/Users/Aaron/Desktop/CODING/Context-Gatekeeper-MCP/dist/src/cli.js"]
+args = ["--no-warnings", "<path-to-context-gatekeeper-mcp>/dist/src/cli.js"]
 ```
 
 ### Cursor (`.cursor/mcp.json`)
@@ -86,7 +86,7 @@ args = ["--no-warnings", "C:/Users/Aaron/Desktop/CODING/Context-Gatekeeper-MCP/d
       "command": "node",
       "args": [
         "--no-warnings",
-        "C:/Users/Aaron/Desktop/CODING/Context-Gatekeeper-MCP/dist/src/cli.js"
+        "<path-to-context-gatekeeper-mcp>/dist/src/cli.js"
       ]
     }
   }
