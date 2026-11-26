@@ -1,7 +1,7 @@
 ---
 title: Plan - Feature: v0.4 Local Tool Telemetry and Stats CLI
 ticket: local://CGK:CGK-Plan-v0-4-Local-Tool-Telemetry-and-Stats-CLI-2026-11
-status: in-progress
+status: shipped
 priority: 
 state: 
 due: 
@@ -20,6 +20,7 @@ reviewSession: f7e00023-0dd0-4046-aadc-f39d862fc3d3
 reviewTestDropReason: Commit 720b719 on main switched to global adw CLI and removed scripts/ticket.test.mjs; this feature adds 3 new telemetry tests (22/22 pass).
 baseBranch: main
 reviewFingerprint: 1a1747d42c85e7dabd9e5254caa51a1008b4f218e6cd507caff86cef1e1fba81
+pr: https://github.com/AaronPG095/Context-Gatekeeper-MCP/pull/8
 ---
 # v0.4 Local Tool Telemetry and Stats CLI
 
