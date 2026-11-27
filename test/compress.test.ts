@@ -4,7 +4,7 @@ import {
   createGitDiffFixture,
   createVitestFixture,
 } from '../benchmarks/fixtures.js';
-import { compressOutput } from '../src/compress/registry.js';
+import { compressOutput, selectRule } from '../src/compress/registry.js';
 import { stripAnsi } from '../src/compress/runner.js';
 
 describe('stripAnsi', () => {
@@ -112,5 +112,51 @@ describe('compressOutput', () => {
     );
     expect(jsonRes.rule).toBe('generic');
     expect(jsonRes.summary).toContain('Folded JSON array: 10 items, keys=[id, name]');
+  });
+
+  it('avoids wrapper bloat on short clean generic outputs', () => {
+    const shortLines = [
+      { stream: 'stdout' as const, text: 'Created plan: docs/plans/Foo.plan.md' },
+      { stream: 'stdout' as const, text: 'Ticket set to Doing: local://FOO:1' },
+    ];
+    const res = compressOutput('adw new "Foo"', shortLines, 0);
+    expect(res.rule).toBe('generic');
+    expect(res.summary).toBe(
+      'Created plan: docs/plans/Foo.plan.md\nTicket set to Doing: local://FOO:1',
+    );
+    expect(res.summary).not.toContain('[generic]');
+    expect(res.summary).not.toContain('L1:');
+  });
+
+  it('prevents quoted args and mixed shell chains from misclassifying rules', () => {
+    expect(
+      selectRule(
+        'adw tick plan.md "AC1" --verify-cmd "npm test"; if ($LASTEXITCODE -eq 0) { adw pack plan.md --test }',
+      ),
+    ).toBe('generic');
+    expect(
+      selectRule(
+        'npm run typecheck; if ($LASTEXITCODE -eq 0) { adw tick plan.md "AC1"; git commit -m "feat: x"; git push }',
+      ),
+    ).toBe('generic');
+    expect(selectRule('Set-Location "C:\\repo"; npm test')).toBe('vitest');
+    expect(selectRule('tsc -p tsconfig.a.json && tsc -p tsconfig.b.json')).toBe('tsc');
+  });
+
+  it('caps total inline diff lines across multi-file git diffs', () => {
+    const lines: Array<{ stream: 'stdout'; text: string }> = [];
+    for (let f = 1; f <= 6; f += 1) {
+      lines.push({ stream: 'stdout', text: `diff --git a/src/f${f}.ts b/src/f${f}.ts` });
+      lines.push({ stream: 'stdout', text: '@@ -1,20 +1,20 @@' });
+      for (let k = 1; k <= 20; k += 1) {
+        lines.push({ stream: 'stdout', text: `+export const v${f}_${k} = ${k};` });
+      }
+    }
+    const res = compressOutput('git diff main...HEAD', lines, 0);
+    expect(res.rule).toBe('git');
+    expect(res.summary).toContain('src/f1.ts +20/-0');
+    expect(res.summary).toContain('+export const v1_1 = 1;');
+    expect(res.summary).toContain('src/f6.ts +20/-0');
+    expect(res.summary).toContain('[large diff collapsed; use fetch_chunk]');
   });
 });

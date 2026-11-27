@@ -8,7 +8,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { encode } from 'gpt-tokenizer/encoding/o200k_base';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createGatekeeperServer } from '../src/server.js';
-import { getCacheDir, openDatabase } from '../src/store/db.js';
+import { getCacheDir, getDefaultDbPath, openDatabase } from '../src/store/db.js';
 import {
   TelemetryStore,
   aggregateStats,
@@ -258,5 +258,66 @@ describe('TelemetryStore and stats aggregation', () => {
     expect(existsSync(inactiveRealDb)).toBe(true);
     expect(existsSync(deletedRootDb)).toBe(false);
     expect(existsSync(orphanEmptyDb)).toBe(false);
+  });
+
+  it('attributes run_compact and fetch_chunk to getWorkspace(cwd) and skips locked DBs during prune', async () => {
+    const cacheDir = makeTempDir('cgk-ws-attr-cache-');
+    const defaultRepo = makeTempDir('cgk-default-repo-');
+    const otherRepo = makeTempDir('cgk-other-repo-');
+
+    const prevEnv = process.env.CGK_CACHE_DIR;
+    process.env.CGK_CACHE_DIR = cacheDir;
+
+    try {
+      const instance = createGatekeeperServer({ rootDir: defaultRepo });
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      await instance.server.connect(serverTransport);
+      const client = new Client({ name: 'attr-test', version: '0.5.0' });
+      await client.connect(clientTransport);
+
+      try {
+        const runRes = await client.callTool({
+          name: 'run_compact',
+          arguments: {
+            command: 'node -e "console.log(\'hello from other repo\')"',
+            cwd: otherRepo,
+          },
+        });
+        const text = (runRes.content as Array<{ text: string }>)[0].text;
+        const artMatch = text.match(/artifact_id=(art_[0-9a-f]{8})/);
+        expect(artMatch).not.toBeNull();
+
+        await client.callTool({
+          name: 'fetch_chunk',
+          arguments: {
+            artifact_id: artMatch![1],
+            line_range: '1-5',
+          },
+        });
+
+        // Create an orphan empty DB and hold an open SQLite handle on Windows to simulate EBUSY.
+        const lockedOrphanDb = join(cacheDir, 'locked-orphan.db');
+        const heldConn = openDatabase(lockedOrphanDb);
+        try {
+          const pruneRes = pruneStaleCacheDbs(cacheDir);
+          expect(pruneRes.kept).toBeGreaterThanOrEqual(2);
+        } finally {
+          heldConn.close();
+        }
+      } finally {
+        await client.close();
+        instance.close();
+      }
+
+      const otherDbPath = getDefaultDbPath(otherRepo);
+      const agg = aggregateStats([getDefaultDbPath(defaultRepo), otherDbPath]);
+      const otherSummary = agg.repos.find((r) => r.rootDir === otherRepo);
+      const defaultSummary = agg.repos.find((r) => r.rootDir === defaultRepo);
+      expect(otherSummary?.calls).toBe(2);
+      expect(defaultSummary?.calls).toBe(0);
+    } finally {
+      if (prevEnv === undefined) delete process.env.CGK_CACHE_DIR;
+      else process.env.CGK_CACHE_DIR = prevEnv;
+    }
   });
 });

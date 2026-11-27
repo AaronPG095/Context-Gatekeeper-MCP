@@ -2,6 +2,7 @@ import type { OutputLine } from '../../store/artifacts.js';
 
 const LOCKFILE_RE = /(?:^|\/)(?:package-lock\.json|yarn\.lock|pnpm-lock\.yaml|Cargo\.lock|poetry\.lock)$/i;
 const MAX_INLINE_HUNK_LINES = 30;
+const MAX_TOTAL_INLINE_DIFF_LINES = 80;
 
 /**
  * Compresses `git diff`, `git status`, and `git log` outputs.
@@ -84,17 +85,23 @@ function compressGitDiff(lines: OutputLine[], exitCode: number): string {
     `[git diff] exit=${exitCode} files=${files.length} raw_lines=${lines.length}`,
   ];
 
+  let inlineUsed = 0;
+
   for (const f of files) {
     const stats = `+${f.added}/-${f.deleted} (L${f.startLine}-L${f.endLine})`;
     if (f.isLockfile) {
       out.push(`  ${f.file} ${stats} [lockfile collapsed]`);
-    } else if (f.bodyLines.length > MAX_INLINE_HUNK_LINES) {
+    } else if (
+      f.bodyLines.length > MAX_INLINE_HUNK_LINES ||
+      inlineUsed + f.bodyLines.length > MAX_TOTAL_INLINE_DIFF_LINES
+    ) {
       out.push(`  ${f.file} ${stats} [large diff collapsed; use fetch_chunk]`);
     } else {
       out.push(`  ${f.file} ${stats}`);
       for (const b of f.bodyLines) {
         out.push(`    ${b}`);
       }
+      inlineUsed += f.bodyLines.length;
     }
   }
 

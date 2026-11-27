@@ -32,7 +32,7 @@ function printHelp(): void {
 Usage:
   context-gatekeeper-mcp [--root <dir>] [--db <path>]         Start MCP stdio server
   context-gatekeeper-mcp run <command...>                     Run command & print compact summary
-  context-gatekeeper-mcp fetch <artifact_id> [--query <q>] [--range <a..b>] [--context <n>]
+  context-gatekeeper-mcp fetch <artifact_id> [--query <q>] [--range <a..b>] [--context <n>] [--max-lines <n>]
   context-gatekeeper-mcp stats [--all] [--days <n>] [--json] [--prune]  Show/prune local telemetry
 `);
 }
@@ -153,11 +153,18 @@ async function runCliProxy(
       let query: string | undefined;
       let lineRange: string | undefined;
       let contextLines: number | undefined;
+      let maxLines: number | undefined;
 
       for (let i = 1; i < args.length; i += 1) {
         if (args[i] === '--query' && args[i + 1]) query = args[++i];
         else if (args[i] === '--range' && args[i + 1]) lineRange = args[++i];
-        else if (args[i] === '--context' && args[i + 1]) contextLines = Number(args[++i]);
+        else if (args[i] === '--context' && args[i + 1]) {
+          const parsed = Number(args[++i]);
+          if (Number.isFinite(parsed) && parsed >= 0) contextLines = parsed;
+        } else if (args[i] === '--max-lines' && args[i + 1]) {
+          const parsed = Number(args[++i]);
+          if (Number.isFinite(parsed) && parsed > 0) maxLines = parsed;
+        }
       }
 
       const started = Date.now();
@@ -166,6 +173,7 @@ async function runCliProxy(
         query,
         line_range: lineRange,
         context_lines: contextLines,
+        max_lines: maxLines,
       });
       console.log(res.content);
       try {

@@ -60,6 +60,21 @@ export function compressGeneric(lines: OutputLine[], exitCode: number): string {
     }
   }
 
+  const hasDuplicates = deduped.some((e) => e.count > 1);
+  const totalChars = deduped.reduce((sum, e) => sum + e.text.length, 0);
+
+  if (
+    exitCode === 0 &&
+    errorLines.length === 0 &&
+    !hasDuplicates &&
+    deduped.length <= 25 &&
+    totalChars <= 1_500
+  ) {
+    return deduped.length === 0
+      ? '[generic] exit=0 (empty output)'
+      : deduped.map((e) => e.text).join('\n');
+  }
+
   const out: string[] = [`[generic] exit=${exitCode} raw_lines=${lines.length}`];
 
   if (errorLines.length > 0) {

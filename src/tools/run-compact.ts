@@ -25,6 +25,14 @@ export interface RunCompactResult {
 const stripLinePrefix = (line: string): string =>
   line.trim().replace(/^L\d+:\s*/, '');
 
+const RULE_HEADER_RE =
+  /^\[(?:dotnet|vitest|git(?:\s+(?:diff|status|log))?|tsc|eslint|pytest|generic(?::json)?)\]\s+exit=/;
+
+function splitSummaryBody(text: string): string[] {
+  const lines = text.split('\n');
+  return lines[0] && RULE_HEADER_RE.test(lines[0]) ? lines.slice(1) : lines;
+}
+
 function computeDeltaSummary(
   prev: ArtifactRecord,
   currentSummary: string,
@@ -33,8 +41,8 @@ function computeDeltaSummary(
 ): string | null {
   if (!prev.summary_text) return null;
 
-  const prevBody = prev.summary_text.split('\n').slice(1);
-  const currBody = currentSummary.split('\n').slice(1);
+  const prevBody = splitSummaryBody(prev.summary_text);
+  const currBody = splitSummaryBody(currentSummary);
 
   const prevNormMap = new Map<string, string>();
   for (const line of prevBody) {

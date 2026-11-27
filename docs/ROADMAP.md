@@ -4,11 +4,12 @@ Prioritized token-efficiency improvements beyond **v0.1.1**.
 
 ---
 
-## Shipped (`v0.2.0` – `v0.4.0`)
+## Shipped (`v0.2.0` – `v0.5.0`)
 
 - **v0.2.0:** Delta-only re-runs (`run_compact` `delta`), batched `read_symbol` (`symbols[]`), `inbound_refs`-ranked `repo_map` (`limit`), Python & Markdown indexing.
 - **v0.3.0 / v0.3.1:** 1-hop dependency context (`include_deps`), `symbols_fts` search (`repo_map(query)`), `tsc` / `eslint` / `biome` / `pytest` compressors, JSON array folding.
-- **v0.4.0:** 100% local SQLite `tool_events` telemetry across all 6 tools + `stats [--all] [--days <n>] [--json]` CLI to measure real-world savings and surface `generic` fallbacks.
+- **v0.4.0 / v0.4.1:** 100% local SQLite `tool_events` telemetry across all 6 tools, `stats [--all] [--days <n>] [--json] [--prune]` CLI, and `CGK_CACHE_DIR` test isolation.
+- **v0.5.0:** Workspace-attributed `run_compact` & `fetch_chunk` telemetry, `EBUSY`-safe `stats --prune`, zero-bloat short-output pass-through in `generic`, quote- & chain-aware `selectRule()`, `fetch_chunk` `max_lines` safety cap (`120`), and multi-file `git diff` inline budget (`80` lines).
 
 ---
 
