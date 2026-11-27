@@ -14,6 +14,11 @@ agent: Gemini
 branch: feat/v0-5-telemetry-driven-upgrades
 worktree: Context-Gatekeeper-MCP
 startedAt: 2026-11-27
+reviewedBy: Gemini
+reviewVerdict: pass
+reviewSession: d0d8903f-b395-4f76-bbc4-969351aece53
+baseBranch: main
+reviewFingerprint: 3ad631cabb8713cfa0e73fd26928033b57f5610d01a6de4f6aae30b89f15eb0a
 ---
 # v0.5 Telemetry-Driven Compression and Attribution Upgrades
 
@@ -64,3 +69,4 @@ User approved ("Bundle all in. /approved").
 ## Progress log
 
 <!-- One line per session/review, added with `ticket.mjs log` or `ticket.mjs review` -->
+- 2026-11-27 11:49 UTC, Gemini (review: pass): v0.5.0 AC1-AC4 and follow-up fixes (RULE_HEADER_RE, NaN guards, README 634-token update) verified clean; 28/28 tests pass. [reviewer: d0d8903f-b395-4f76-bbc4-969351aece53]
