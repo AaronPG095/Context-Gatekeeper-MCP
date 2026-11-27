@@ -1,7 +1,7 @@
 ---
 title: Plan - Feature: v0.5 Telemetry-Driven Compression and Attribution Upgrades
 ticket: local://CGK:CGK-Plan-v0-5-Telemetry-Driven-Compression-and-Attribution-Upgrades-2026-11
-status: in-progress
+status: shipped
 priority: 
 state: 
 due: 
@@ -19,6 +19,7 @@ reviewVerdict: pass
 reviewSession: d0d8903f-b395-4f76-bbc4-969351aece53
 baseBranch: main
 reviewFingerprint: 3ad631cabb8713cfa0e73fd26928033b57f5610d01a6de4f6aae30b89f15eb0a
+pr: https://github.com/AaronPG095/Context-Gatekeeper-MCP/pull/14
 ---
 # v0.5 Telemetry-Driven Compression and Attribution Upgrades
 
