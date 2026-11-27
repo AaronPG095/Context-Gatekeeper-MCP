@@ -85,9 +85,16 @@ describe('runCompact + fetchChunk integration', () => {
     expect(uncapped.returned_lines).toBe(200);
     expect(uncapped.truncated).toBeUndefined();
 
-    const shortCmd = 'node -e "console.log(\'clean step 1\'); console.log(\'clean step 2\')"';
+    const nanFallback = fetchChunk(store, {
+      artifact_id: bigRes.artifact_id,
+      line_range: '1-200',
+      max_lines: Number.NaN,
+    });
+    expect(nanFallback.returned_lines).toBe(120);
+
+    const shortCmd = 'node -e "console.log(\'[main 1a2b3c4] commit msg\'); console.log(\'1 file changed\')"';
     const s1 = await runCompact(store, { command: shortCmd });
-    expect(s1.summary).toBe('clean step 1\nclean step 2');
+    expect(s1.summary).toBe('[main 1a2b3c4] commit msg\n1 file changed');
     const s2 = await runCompact(store, { command: shortCmd });
     expect(s2.is_delta).toBe(true);
     expect(s2.summary).toContain(`[delta vs ${s1.artifact_id}] No change`);

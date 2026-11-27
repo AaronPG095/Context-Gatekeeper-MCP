@@ -158,8 +158,13 @@ async function runCliProxy(
       for (let i = 1; i < args.length; i += 1) {
         if (args[i] === '--query' && args[i + 1]) query = args[++i];
         else if (args[i] === '--range' && args[i + 1]) lineRange = args[++i];
-        else if (args[i] === '--context' && args[i + 1]) contextLines = Number(args[++i]);
-        else if (args[i] === '--max-lines' && args[i + 1]) maxLines = Number(args[++i]);
+        else if (args[i] === '--context' && args[i + 1]) {
+          const parsed = Number(args[++i]);
+          if (Number.isFinite(parsed) && parsed >= 0) contextLines = parsed;
+        } else if (args[i] === '--max-lines' && args[i + 1]) {
+          const parsed = Number(args[++i]);
+          if (Number.isFinite(parsed) && parsed > 0) maxLines = parsed;
+        }
       }
 
       const started = Date.now();

@@ -25,9 +25,12 @@ export interface RunCompactResult {
 const stripLinePrefix = (line: string): string =>
   line.trim().replace(/^L\d+:\s*/, '');
 
+const RULE_HEADER_RE =
+  /^\[(?:dotnet|vitest|git(?:\s+(?:diff|status|log))?|tsc|eslint|pytest|generic(?::json)?)\]\s+exit=/;
+
 function splitSummaryBody(text: string): string[] {
   const lines = text.split('\n');
-  return lines[0]?.startsWith('[') ? lines.slice(1) : lines;
+  return lines[0] && RULE_HEADER_RE.test(lines[0]) ? lines.slice(1) : lines;
 }
 
 function computeDeltaSummary(

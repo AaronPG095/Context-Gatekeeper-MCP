@@ -66,7 +66,10 @@ export function fetchChunk(
   if (input.line_range !== undefined) {
     mode = 'line_range';
     const [start, end] = parseLineRange(input.line_range);
-    const maxLines = Math.max(1, Math.floor(input.max_lines ?? DEFAULT_MAX_RANGE_LINES));
+    const maxLines =
+      input.max_lines !== undefined && Number.isFinite(input.max_lines) && input.max_lines > 0
+        ? Math.floor(input.max_lines)
+        : DEFAULT_MAX_RANGE_LINES;
     const effectiveEnd = Math.min(end, artifact.raw_lines);
     const clampedEnd = Math.min(effectiveEnd, start + maxLines - 1);
     rows = store.fetchByLineRange(input.artifact_id, start, clampedEnd);
