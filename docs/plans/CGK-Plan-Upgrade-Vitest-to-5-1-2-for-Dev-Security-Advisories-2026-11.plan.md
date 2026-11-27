@@ -1,7 +1,7 @@
 ---
 title: Plan - Chore: Upgrade Vitest to 5.1.2 for Dev Security Advisories
 ticket: local://CGK:CGK-Plan-Upgrade-Vitest-to-5-1-2-for-Dev-Security-Advisories-2026-11
-status: in-progress
+status: shipped
 priority: 
 state: 
 due: 
@@ -19,6 +19,7 @@ reviewVerdict: pass
 reviewSession: b8658744-4d77-4c58-a0b6-aab92480acd4
 baseBranch: main
 reviewFingerprint: 3d1c429f9f3f0fba1e1d8c9077d42efa3dc84bb3e9b0d5a83ccfcc17dc49253d
+pr: https://github.com/AaronPG095/Context-Gatekeeper-MCP/pull/15
 ---
 # Upgrade Vitest to 5.1.2 for Dev Security Advisories
 
