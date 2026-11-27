@@ -36,6 +36,7 @@ export interface GatekeeperServerInstance {
 interface WorkspaceContext {
   rootDir: string;
   db: DatabaseSync;
+  artifactStore: ArtifactStore;
   symbolStore: SymbolStore;
   telemetryStore: TelemetryStore;
   ensureIndexed: () => Promise<void>;
@@ -69,14 +70,14 @@ export function createGatekeeperServer(
   const indexTtlMs = options.indexTtlMs ?? 5_000;
 
   const db = openDatabase(defaultDbPath);
-  const artifactStore = new ArtifactStore(db);
-
   const workspaces = new Map<string, WorkspaceContext>();
+  const artifactOwners = new Map<string, WorkspaceContext>();
 
   const createWorkspaceContext = (
     wsRoot: string,
     wsDb: DatabaseSync,
   ): WorkspaceContext => {
+    const wsArtifactStore = new ArtifactStore(wsDb);
     const wsSymbolStore = new SymbolStore(wsDb);
     const wsTelemetryStore = new TelemetryStore(wsDb);
     try {
@@ -105,6 +106,7 @@ export function createGatekeeperServer(
     return {
       rootDir: wsRoot,
       db: wsDb,
+      artifactStore: wsArtifactStore,
       symbolStore: wsSymbolStore,
       telemetryStore: wsTelemetryStore,
       ensureIndexed,
@@ -129,9 +131,22 @@ export function createGatekeeperServer(
     return ctx;
   };
 
+  const resolveArtifactWorkspace = (artifactId: string): WorkspaceContext => {
+    const tracked = artifactOwners.get(artifactId);
+    if (tracked) return tracked;
+    if (defaultCtx.artifactStore.getArtifact(artifactId)) return defaultCtx;
+    for (const ctx of workspaces.values()) {
+      if (ctx !== defaultCtx && ctx.artifactStore.getArtifact(artifactId)) {
+        artifactOwners.set(artifactId, ctx);
+        return ctx;
+      }
+    }
+    return defaultCtx;
+  };
+
   const server = new McpServer({
     name: 'context-gatekeeper-mcp',
-    version: '0.4.1',
+    version: '0.5.0',
   });
 
   server.registerTool(
@@ -147,16 +162,17 @@ export function createGatekeeperServer(
     },
     async ({ command, cwd, timeout_ms, delta }) => {
       const started = Date.now();
-      const targetCwd = cwd ?? defaultRoot;
-      const res = await runCompact(artifactStore, {
+      const ws = getWorkspace(cwd);
+      const res = await runCompact(ws.artifactStore, {
         command,
-        cwd: targetCwd,
+        cwd: ws.rootDir,
         timeoutMs: timeout_ms,
         delta,
       });
+      artifactOwners.set(res.artifact_id, ws);
       const text = `artifact_id=${res.artifact_id} exit=${res.exit_code} rule=${res.rule} lines=${res.raw_lines}->${res.summary_lines}\n${res.summary}`;
-      const rawBytes = artifactStore.getArtifact(res.artifact_id)?.raw_bytes ?? text.length;
-      safeRecord(defaultCtx.telemetryStore, {
+      const rawBytes = ws.artifactStore.getArtifact(res.artifact_id)?.raw_bytes ?? text.length;
+      safeRecord(ws.telemetryStore, {
         tool: 'run_compact',
         target: res.rule,
         baselineChars: Math.max(rawBytes, text.length),
@@ -178,19 +194,22 @@ export function createGatekeeperServer(
         query: z.string().optional(),
         line_range: z.string().optional(),
         context_lines: z.number().int().min(0).optional(),
+        max_lines: z.number().int().positive().optional(),
       },
     },
-    ({ artifact_id, query, line_range, context_lines }) => {
+    ({ artifact_id, query, line_range, context_lines, max_lines }) => {
       const started = Date.now();
-      const res = fetchChunk(artifactStore, {
+      const ws = resolveArtifactWorkspace(artifact_id);
+      const res = fetchChunk(ws.artifactStore, {
         artifact_id,
         query,
         line_range,
         context_lines,
+        max_lines,
       });
       const text = `[${res.artifact_id} mode=${res.mode} lines=${res.returned_lines}/${res.total_lines}]\n${res.content}`;
-      const rawBytes = artifactStore.getArtifact(artifact_id)?.raw_bytes ?? text.length;
-      safeRecord(defaultCtx.telemetryStore, {
+      const rawBytes = ws.artifactStore.getArtifact(artifact_id)?.raw_bytes ?? text.length;
+      safeRecord(ws.telemetryStore, {
         tool: 'fetch_chunk',
         target: res.mode,
         baselineChars: Math.max(rawBytes, text.length),
@@ -325,7 +344,7 @@ export function createGatekeeperServer(
   return {
     server,
     db,
-    artifactStore,
+    artifactStore: defaultCtx.artifactStore,
     symbolStore: defaultCtx.symbolStore,
     telemetryStore: defaultCtx.telemetryStore,
     close: () => {

@@ -62,6 +62,7 @@ export {
 export {
   fetchChunk,
   parseLineRange,
+  DEFAULT_MAX_RANGE_LINES,
   type FetchChunkInput,
   type FetchChunkResult,
 } from './tools/fetch-chunk.js';

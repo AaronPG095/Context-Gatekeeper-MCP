@@ -1,11 +1,14 @@
 import type { ArtifactLineRow, ArtifactStore } from '../store/artifacts.js';
 
+export const DEFAULT_MAX_RANGE_LINES = 120;
+
 export interface FetchChunkInput {
   artifact_id: string;
   query?: string;
   line_range?: [number, number] | string;
   context_lines?: number;
   limit?: number;
+  max_lines?: number;
 }
 
 export interface FetchChunkResult {
@@ -13,6 +16,7 @@ export interface FetchChunkResult {
   total_lines: number;
   mode: 'line_range' | 'fts_query' | 'head';
   returned_lines: number;
+  truncated?: boolean;
   content: string;
 }
 
@@ -56,11 +60,20 @@ export function fetchChunk(
 
   let mode: FetchChunkResult['mode'] = 'head';
   let rows: ArtifactLineRow[];
+  let truncated = false;
+  let omittedNote = '';
 
   if (input.line_range !== undefined) {
     mode = 'line_range';
     const [start, end] = parseLineRange(input.line_range);
-    rows = store.fetchByLineRange(input.artifact_id, start, end);
+    const maxLines = Math.max(1, Math.floor(input.max_lines ?? DEFAULT_MAX_RANGE_LINES));
+    const effectiveEnd = Math.min(end, artifact.raw_lines);
+    const clampedEnd = Math.min(effectiveEnd, start + maxLines - 1);
+    rows = store.fetchByLineRange(input.artifact_id, start, clampedEnd);
+    if (effectiveEnd > clampedEnd) {
+      truncated = true;
+      omittedNote = `\n... (capped at ${maxLines} lines, L${clampedEnd + 1}-L${effectiveEnd} omitted; pass narrower line_range or max_lines)`;
+    }
   } else if (input.query && input.query.trim().length > 0) {
     mode = 'fts_query';
     rows = store.searchLines(input.artifact_id, input.query, {
@@ -71,12 +84,13 @@ export function fetchChunk(
     rows = store.fetchByLineRange(input.artifact_id, 1, 50);
   }
 
-  const content = formatRows(rows);
+  const content = formatRows(rows) + omittedNote;
   return {
     artifact_id: input.artifact_id,
     total_lines: artifact.raw_lines,
     mode,
     returned_lines: rows.length,
+    ...(truncated ? { truncated: true } : {}),
     content,
   };
 }

@@ -21,12 +21,70 @@ export interface CompressedOutput {
   summary: string;
 }
 
-/**
- * Classifies a command string into a specialized compressor rule, falling back
- * to `generic` when no specialized rule matches.
- */
-export function selectRule(command: string): CompressorRuleName {
-  const lower = command.trim().toLowerCase();
+const SHELL_GLUE_RE =
+  /^(?:cd|set-location|push-location|pop-location|pushd|popd|true|exit(?:\s+\$?\w+)?)\b/i;
+
+function splitShellSegments(command: string): string[] {
+  const rawSegments: string[] = [];
+  let buf = '';
+  let quote: '"' | "'" | null = null;
+
+  for (let i = 0; i < command.length; i += 1) {
+    const ch = command[i];
+    if (quote) {
+      if (ch === '\\' && quote === '"' && i + 1 < command.length) {
+        buf += ch + command[++i];
+        continue;
+      }
+      if (ch === '`' && quote === '"' && i + 1 < command.length) {
+        buf += ch + command[++i];
+        continue;
+      }
+      if (ch === quote) quote = null;
+      buf += ch;
+      continue;
+    }
+
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      buf += ch;
+      continue;
+    }
+
+    if (ch === ';') {
+      rawSegments.push(buf);
+      buf = '';
+      continue;
+    }
+
+    if ((ch === '&' || ch === '|') && command[i + 1] === ch) {
+      rawSegments.push(buf);
+      buf = '';
+      i += 1;
+      continue;
+    }
+
+    buf += ch;
+  }
+  rawSegments.push(buf);
+
+  const cleaned: string[] = [];
+  for (const raw of rawSegments) {
+    let seg = raw.trim();
+    // Unwrap PowerShell `if ($LASTEXITCODE ...) { ... }` wrappers around chained steps.
+    seg = seg.replace(/^if\s*\([^)]*\)\s*\{\s*/i, '').replace(/\s*\}+\s*$/, '').trim();
+    if (!seg || SHELL_GLUE_RE.test(seg)) continue;
+    cleaned.push(seg);
+  }
+  return cleaned;
+}
+
+function stripQuotedArgs(segment: string): string {
+  return segment.replace(/"(?:\\.|`.|[^"])*"|'[^']*'/g, '""');
+}
+
+function matchSegmentRule(segment: string): Exclude<CompressorRuleName, 'generic'> | null {
+  const lower = stripQuotedArgs(segment).trim().toLowerCase();
   if (/\bdotnet\s+(?:build|test|restore|publish)\b/.test(lower)) {
     return 'dotnet';
   }
@@ -45,7 +103,28 @@ export function selectRule(command: string): CompressorRuleName {
   if (/\bpytest\b/.test(lower)) {
     return 'pytest';
   }
-  return 'generic';
+  return null;
+}
+
+/**
+ * Classifies a command string into a specialized compressor rule, falling back
+ * to `generic` when no specialized rule matches or when a shell chain mixes
+ * incompatible commands (so narrow rules never swallow output from chained tools).
+ */
+export function selectRule(command: string): CompressorRuleName {
+  const segments = splitShellSegments(command);
+  if (segments.length === 0) return 'generic';
+
+  const rules = segments.map(matchSegmentRule);
+  const first = rules[0];
+  if (!first) return 'generic';
+
+  for (let i = 1; i < rules.length; i += 1) {
+    if (rules[i] !== first) {
+      return 'generic';
+    }
+  }
+  return first;
 }
 
 /**

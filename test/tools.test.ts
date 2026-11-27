@@ -60,4 +60,36 @@ describe('runCompact + fetchChunk integration', () => {
     expect(second.prev_artifact_id).toBe(first.artifact_id);
     expect(second.summary).toContain(`[delta vs ${first.artifact_id}] No change`);
   });
+
+  it('enforces max_lines safety cap on wide line_range reads and preserves delta on clean short outputs', async () => {
+    const db = openDatabase(':memory:');
+    dbs.push(db);
+    const store = new ArtifactStore(db);
+
+    const bigCmd = 'node -e "for (let i = 1; i <= 200; i++) console.log(\'row-\' + i)"';
+    const bigRes = await runCompact(store, { command: bigCmd });
+
+    const capped = fetchChunk(store, {
+      artifact_id: bigRes.artifact_id,
+      line_range: '1-200',
+    });
+    expect(capped.returned_lines).toBe(120);
+    expect(capped.truncated).toBe(true);
+    expect(capped.content).toContain('capped at 120 lines, L121-L200 omitted');
+
+    const uncapped = fetchChunk(store, {
+      artifact_id: bigRes.artifact_id,
+      line_range: '1-200',
+      max_lines: 200,
+    });
+    expect(uncapped.returned_lines).toBe(200);
+    expect(uncapped.truncated).toBeUndefined();
+
+    const shortCmd = 'node -e "console.log(\'clean step 1\'); console.log(\'clean step 2\')"';
+    const s1 = await runCompact(store, { command: shortCmd });
+    expect(s1.summary).toBe('clean step 1\nclean step 2');
+    const s2 = await runCompact(store, { command: shortCmd });
+    expect(s2.is_delta).toBe(true);
+    expect(s2.summary).toContain(`[delta vs ${s1.artifact_id}] No change`);
+  });
 });

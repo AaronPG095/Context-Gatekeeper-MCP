@@ -427,10 +427,15 @@ export function pruneStaleCacheDbs(cacheDir: string = getCacheDir()): PruneResul
     }
 
     if (shouldRemove) {
-      rmSync(dbPath, { force: true });
-      rmSync(`${dbPath}-wal`, { force: true });
-      rmSync(`${dbPath}-shm`, { force: true });
-      removed += 1;
+      try {
+        rmSync(dbPath, { force: true });
+        rmSync(`${dbPath}-wal`, { force: true });
+        rmSync(`${dbPath}-shm`, { force: true });
+        removed += 1;
+      } catch {
+        // Skip DBs currently locked by a live MCP server process (EBUSY/EPERM on Windows).
+        kept += 1;
+      }
     } else {
       kept += 1;
     }
